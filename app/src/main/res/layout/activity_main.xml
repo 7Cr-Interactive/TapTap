@@ -1,29 +1,33 @@
-<?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/main_layout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    android:layout_height="match_parent">
 
-    <!-- Fullscreen wallpaper with embedded logo -->
+    <!-- Background Image properly scaled -->
     <ImageView
-        android:id="@+id/background"
+        android:id="@+id/backgroundImage"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:src="@drawable/background_wallpaper"
         android:scaleType="centerCrop"
-        android:src="@drawable/background_wallpaper" />
+        android:adjustViewBounds="true" />
 
     <!-- Start Game Button -->
     <Button
-        android:id="@+id/start_button"
+        android:id="@+id/startButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:text="Start"
         android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
-        android:layout_marginBottom="80dp"
-        android:text="Start TapTap"
-        android:backgroundTint="#00C853"
-        android:textColor="#FFFFFF"
-        android:textSize="18sp" />
+        android:layout_marginBottom="100dp"
+        android:layout_centerHorizontal="true" />
+
+    <!-- High Score Button -->
+    <Button
+        android:id="@+id/highscoreButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Highscore"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="30dp"
+        android:layout_centerHorizontal="true" />
 </RelativeLayout>
