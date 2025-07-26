@@ -87,7 +87,7 @@ class GameActivity : AppCompatActivity() {
     }
 
     private fun resetTimer() {
-        remainingTime = 10
+        remainingTime = (10 - (score / 10)).coerceAtLeast(3)
         timerText.text = "Time: ${remainingTime}s"
     }
 
