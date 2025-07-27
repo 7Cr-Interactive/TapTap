@@ -1,5 +1,6 @@
 package com.example.taptap
 
+import android.widget.TextView
 import android.content.Intent
 import android.media.MediaPlayer
 import android.os.Build
@@ -9,6 +10,7 @@ import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AlertDialog
 
 class MainActivity : AppCompatActivity() {
 
@@ -18,19 +20,27 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Enable immersive fullscreen mode
         enableImmersiveMode()
 
-        // Start launch music
-        launchMusic = MediaPlayer.create(this, R.raw.launch_music)
-        launchMusic.isLooping = true
-        launchMusic.start()
+        // Initialize launch music
+        launchMusic = MediaPlayer.create(this, R.raw.launch_music).apply {
+            isLooping = true
+            start()
+        }
+
+        val helpTextView: TextView = findViewById(R.id.helpTextView)
+        helpTextView.setOnClickListener {
+            val intent = Intent(this, HelpActivity::class.java)
+            startActivity(intent)
+        }
 
         val startButton: Button = findViewById(R.id.startButton)
         val highscoreButton: Button = findViewById(R.id.highscoreButton)
 
         startButton.setOnClickListener {
-            launchMusic.stop()
+            if (launchMusic.isPlaying) {
+                launchMusic.pause()
+            }
             val intent = Intent(this, GameActivity::class.java)
             startActivity(intent)
         }
@@ -39,6 +49,27 @@ class MainActivity : AppCompatActivity() {
             val intent = Intent(this, HighScoreActivity::class.java)
             intent.putExtra("SHOW_FOR_5_SEC", false)
             startActivity(intent)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::launchMusic.isInitialized && !launchMusic.isPlaying) {
+            launchMusic.start()
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (::launchMusic.isInitialized && launchMusic.isPlaying) {
+            launchMusic.pause()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (::launchMusic.isInitialized) {
+            launchMusic.release()
         }
     }
 
@@ -51,14 +82,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun enableImmersiveMode() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            // Android 11+ (API 30+)
             window.setDecorFitsSystemWindows(false)
             window.insetsController?.let { controller ->
                 controller.hide(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
                 controller.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             }
         } else {
-            // Older versions
             @Suppress("DEPRECATION")
             window.decorView.systemUiVisibility = (
                     View.SYSTEM_UI_FLAG_IMMERSIVE
@@ -71,11 +100,22 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        if (::launchMusic.isInitialized && launchMusic.isPlaying) {
-            launchMusic.stop()
+    override fun onBackPressed() {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Exit Game")
+        builder.setMessage("Are you sure you want to exit?")
+
+        builder.setPositiveButton("Yes") { dialog, _ ->
+            dialog.dismiss()
+            finishAffinity() // Exit entire app
         }
-        launchMusic.release()
+
+        builder.setNegativeButton("No") { dialog, _ ->
+            dialog.dismiss()
+        }
+
+        val alert = builder.create()
+        alert.setCancelable(false)
+        alert.show()
     }
 }

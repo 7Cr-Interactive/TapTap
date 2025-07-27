@@ -1,5 +1,7 @@
 package com.example.taptap
 
+import android.animation.Animator
+import android.animation.AnimatorSet
 import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Color
@@ -12,10 +14,15 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import android.animation.AnimatorListenerAdapter
 import kotlin.random.Random
+import android.animation.ObjectAnimator
+import androidx.activity.OnBackPressedCallback
+import android.os.Bundle
+
 
 class GameActivity : AppCompatActivity() {
-
+    private var missedBubbles = 0
     private lateinit var gameLayout: FrameLayout
     private lateinit var scoreText: TextView
     private lateinit var timerText: TextView
@@ -31,7 +38,7 @@ class GameActivity : AppCompatActivity() {
     private var lastScoreCheckpoint = 0
     private var spawnRunnable: Runnable? = null
 
-    private var remainingTime = 10
+    private var remainingTime = 5
     private var timerHandler = Handler(Looper.getMainLooper())
     private lateinit var timerRunnable: Runnable
 
@@ -53,12 +60,17 @@ class GameActivity : AppCompatActivity() {
 
         popSound = MediaPlayer.create(this, R.raw.bubble_pop)
         hitSound = MediaPlayer.create(this, R.raw.bubble_pop) // Replace with nail hit sound if needed
-
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                showExitConfirmationDialog()
+            }
+        })
         startGame()
+
     }
 
     private fun startGame() {
-        remainingTime = 10
+        remainingTime = 6 //start of counter
         startTimer()
 
         spawnRunnable = object : Runnable {
@@ -87,7 +99,7 @@ class GameActivity : AppCompatActivity() {
     }
 
     private fun resetTimer() {
-        remainingTime = (10 - (score / 10)).coerceAtLeast(3)
+        remainingTime = (10 - (score / 10)).coerceAtLeast(1)
         timerText.text = "Time: ${remainingTime}s"
     }
 
@@ -101,7 +113,7 @@ class GameActivity : AppCompatActivity() {
         imageView.scaleType = ImageView.ScaleType.FIT_CENTER
 
         val size = if (isBubble) {
-            Random.nextInt(200, 350)
+            Random.nextInt(150, 350)
         } else {
             Random.nextInt(400, 500)
         }
@@ -121,7 +133,7 @@ class GameActivity : AppCompatActivity() {
                 score++
                 consecutiveNails = 0
                 updateScore()
-
+                missedBubbles = 0 // Reset missed streak
                 playPopAnimation(imageView) {
                     gameLayout.removeView(imageView)
                 }
@@ -148,7 +160,18 @@ class GameActivity : AppCompatActivity() {
                 score--
                 updateScore()
                 hitSound.start()
-                gameLayout.removeView(imageView)
+                // Trigger particle burst at bubble location
+                showParticleBurst(imageView.x + imageView.width / 2, imageView.y + imageView.height / 2)
+                Handler(Looper.getMainLooper()).postDelayed({
+                    if (gameLayout.indexOfChild(imageView) != -1) {
+                        // Missed bubble
+                        gameLayout.removeView(imageView)
+                        missedBubbles++
+                        if (missedBubbles >= 5) {
+                            gameOver()
+                        }
+                    }
+                }, 2000) // 2 seconds to respond
             }
         }
 
@@ -180,6 +203,9 @@ class GameActivity : AppCompatActivity() {
         spawnRunnable?.let { handler.removeCallbacks(it) }
         timerHandler.removeCallbacks(timerRunnable)
 
+        // Prevent dialog crash on activity finish
+        if (isFinishing || isDestroyed) return
+
         val input = EditText(this).apply {
             hint = "Your name"
             gravity = Gravity.CENTER
@@ -208,6 +234,7 @@ class GameActivity : AppCompatActivity() {
             .show()
     }
 
+
     private fun enableImmersiveMode() {
         window.decorView.systemUiVisibility =
             (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
@@ -216,6 +243,38 @@ class GameActivity : AppCompatActivity() {
                     or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                     or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                     or View.SYSTEM_UI_FLAG_LAYOUT_STABLE)
+    }
+    private fun showParticleBurst(x: Float, y: Float) {
+        val particleCount = 10
+
+        for (i in 0 until particleCount) {
+            val particle = ImageView(this)
+            particle.setImageResource(R.drawable.particle)
+
+            val size = Random.nextInt(10, 30)
+            val params = FrameLayout.LayoutParams(size, size)
+            particle.layoutParams = params
+
+            particle.x = x
+            particle.y = y
+
+            gameLayout.addView(particle)
+
+            val animX = ObjectAnimator.ofFloat(particle, "translationX", x, x + Random.nextInt(-200, 200))
+            val animY = ObjectAnimator.ofFloat(particle, "translationY", y, y + Random.nextInt(-200, 200))
+            val fadeOut = ObjectAnimator.ofFloat(particle, "alpha", 1f, 0f)
+
+            AnimatorSet().apply {
+                duration = 500
+                playTogether(animX as Animator, animY as Animator, fadeOut as Animator)
+                start()
+                addListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: Animator) {
+                        gameLayout.removeView(particle)
+                    }
+                })
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -226,4 +285,19 @@ class GameActivity : AppCompatActivity() {
         handler.removeCallbacksAndMessages(null)
         timerHandler.removeCallbacksAndMessages(null)
     }
+    private fun showExitConfirmationDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Exit Game")
+            .setMessage("Stop Playing and miss a chance to be top 10??")
+            .setPositiveButton("Yes") { _, _ ->
+                gameMusic.stop()
+                finish()
+            }
+            .setNegativeButton("No", null)
+            .show()
+    }
+
+
+
+
 }

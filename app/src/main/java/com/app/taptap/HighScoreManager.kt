@@ -50,4 +50,10 @@ object HighScoreManager {
         }
         return scoresList
     }
+    fun clearScores(context: Context) {
+        val prefs = context.getSharedPreferences("high_scores", Context.MODE_PRIVATE)
+        prefs.edit().clear().apply()
+    }
+
+
 }

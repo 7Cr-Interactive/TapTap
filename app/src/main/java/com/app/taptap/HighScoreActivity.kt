@@ -6,14 +6,14 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 
 class HighScoreActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_highscore)
+        setContentView(R.layout.activity_high_score)
 
-        val scrollView = findViewById<ScrollView>(R.id.scrollView)
         val scoreListLayout = findViewById<LinearLayout>(R.id.scoreList)
 
         // Get the top 10 scores
@@ -25,7 +25,7 @@ class HighScoreActivity : AppCompatActivity() {
             val textView = TextView(this).apply {
                 text = "${index + 1}. $name - $score"
                 textSize = 20f
-                gravity = Gravity.CENTER  // Center text horizontally
+                gravity = Gravity.CENTER
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
@@ -38,7 +38,21 @@ class HighScoreActivity : AppCompatActivity() {
         // Back button
         val backButton = findViewById<Button>(R.id.backButton)
         backButton.setOnClickListener {
-            finish()  // Go back to previous screen
+            finish() // Return to MainActivity
+        }
+
+        // Reset Scores button
+        val resetScoresButton = findViewById<Button>(R.id.resetScoresButton)
+        resetScoresButton.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("Reset Scores")
+                .setMessage("Are you sure you want to delete all high scores?")
+                .setPositiveButton("Yes") { _, _ ->
+                    HighScoreManager.clearScores(this)
+                    recreate() // Reload activity to reflect cleared scores
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
         }
     }
 }
