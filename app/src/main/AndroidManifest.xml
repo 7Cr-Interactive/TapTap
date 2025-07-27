@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.taptap">
+    package="com.app.taptap">
 
     <application
         android:allowBackup="true"
@@ -9,14 +9,14 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.Light.NoActionBar"
         android:background="@android:color/transparent">
-
-        <activity android:name=".HighScoreActivity" />
+        <activity android:name="com.app.taptap.HelpActivity" />
+        <activity android:name="com.app.taptap.HighScoreActivity" />
         <activity
-            android:name=".GameActivity"
+            android:name="com.app.taptap.GameActivity"
             android:exported="false" />
 
         <activity
-            android:name=".MainActivity"
+            android:name="com.app.taptap.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -1,8 +1,8 @@
-package com.example.taptap
+package com.app.taptap
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import com.example.taptap.databinding.ActivityHelpBinding
+import com.app.taptap.databinding.ActivityHelpBinding
 
 class HelpActivity : AppCompatActivity() {
     private lateinit var binding: ActivityHelpBinding
