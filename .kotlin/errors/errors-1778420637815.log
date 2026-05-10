@@ -1,0 +1,288 @@
+kotlin version: 2.0.21
+error message: org.jetbrains.kotlin.backend.common.BackendException: Backend Internal error: Exception during IR lowering
+File being compiled: C:/Users/Kodabal/AndroidStudioProjects/TapTap/app/src/main/java/com/app/bubblepop/GameActivity.kt
+The root cause java.lang.RuntimeException was thrown at: org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate(FunctionCodegen.kt:47)
+	at org.jetbrains.kotlin.backend.common.CodegenUtil.reportBackendException(CodegenUtil.kt:253)
+	at org.jetbrains.kotlin.backend.common.CodegenUtil.reportBackendException$default(CodegenUtil.kt:236)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invokeSequential(performByIrFile.kt:65)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invoke(performByIrFile.kt:52)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invoke(performByIrFile.kt:38)
+	at org.jetbrains.kotlin.backend.common.phaser.NamedCompilerPhase.phaseBody(CompilerPhase.kt:166)
+	at org.jetbrains.kotlin.backend.common.phaser.AbstractNamedCompilerPhase.invoke(CompilerPhase.kt:113)
+	at org.jetbrains.kotlin.backend.common.phaser.CompositePhase.invoke(PhaseBuilders.kt:27)
+	at org.jetbrains.kotlin.backend.common.phaser.CompositePhase.invoke(PhaseBuilders.kt:14)
+	at org.jetbrains.kotlin.backend.common.phaser.NamedCompilerPhase.phaseBody(CompilerPhase.kt:166)
+	at org.jetbrains.kotlin.backend.common.phaser.AbstractNamedCompilerPhase.invoke(CompilerPhase.kt:113)
+	at org.jetbrains.kotlin.backend.common.phaser.CompilerPhaseKt.invokeToplevel(CompilerPhase.kt:62)
+	at org.jetbrains.kotlin.backend.jvm.JvmIrCodegenFactory.invokeCodegen(JvmIrCodegenFactory.kt:371)
+	at org.jetbrains.kotlin.codegen.CodegenFactory.generateModule(CodegenFactory.kt:47)
+	at org.jetbrains.kotlin.backend.jvm.JvmIrCodegenFactory.generateModuleInFrontendIRMode(JvmIrCodegenFactory.kt:433)
+	at org.jetbrains.kotlin.cli.jvm.compiler.pipeline.JvmCompilerPipelineKt.generateCodeFromIr(jvmCompilerPipeline.kt:246)
+	at org.jetbrains.kotlin.cli.jvm.compiler.pipeline.JvmCompilerPipelineKt.compileModulesUsingFrontendIrAndLightTree(jvmCompilerPipeline.kt:142)
+	at org.jetbrains.kotlin.cli.jvm.K2JVMCompiler.doExecute(K2JVMCompiler.kt:148)
+	at org.jetbrains.kotlin.cli.jvm.K2JVMCompiler.doExecute(K2JVMCompiler.kt:43)
+	at org.jetbrains.kotlin.cli.common.CLICompiler.execImpl(CLICompiler.kt:103)
+	at org.jetbrains.kotlin.cli.common.CLICompiler.execImpl(CLICompiler.kt:49)
+	at org.jetbrains.kotlin.cli.common.CLITool.exec(CLITool.kt:101)
+	at org.jetbrains.kotlin.incremental.IncrementalJvmCompilerRunner.runCompiler(IncrementalJvmCompilerRunner.kt:464)
+	at org.jetbrains.kotlin.incremental.IncrementalJvmCompilerRunner.runCompiler(IncrementalJvmCompilerRunner.kt:73)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.doCompile(IncrementalCompilerRunner.kt:506)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compileImpl(IncrementalCompilerRunner.kt:423)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.tryCompileIncrementally$lambda$9$compile(IncrementalCompilerRunner.kt:249)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.tryCompileIncrementally(IncrementalCompilerRunner.kt:267)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compile(IncrementalCompilerRunner.kt:120)
+	at org.jetbrains.kotlin.daemon.CompileServiceImplBase.execIncrementalCompiler(CompileServiceImpl.kt:675)
+	at org.jetbrains.kotlin.daemon.CompileServiceImplBase.access$execIncrementalCompiler(CompileServiceImpl.kt:92)
+	at org.jetbrains.kotlin.daemon.CompileServiceImpl.compile(CompileServiceImpl.kt:1660)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(Unknown Source)
+	at java.base/java.lang.reflect.Method.invoke(Unknown Source)
+	at java.rmi/sun.rmi.server.UnicastServerRef.dispatch(Unknown Source)
+	at java.rmi/sun.rmi.transport.Transport$1.run(Unknown Source)
+	at java.rmi/sun.rmi.transport.Transport$1.run(Unknown Source)
+	at java.base/java.security.AccessController.doPrivileged(Unknown Source)
+	at java.rmi/sun.rmi.transport.Transport.serviceCall(Unknown Source)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport.handleMessages(Unknown Source)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run0(Unknown Source)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.lambda$run$0(Unknown Source)
+	at java.base/java.security.AccessController.doPrivileged(Unknown Source)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run(Unknown Source)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(Unknown Source)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(Unknown Source)
+	at java.base/java.lang.Thread.run(Unknown Source)
+Caused by: java.lang.RuntimeException: Exception while generating code for:
+FUN LOCAL_FUNCTION name:startRandomBirds$launchBird visibility:private modality:FINAL <> (this$0:com.app.taptap.GameActivity, bird:@[FlexibleNullability] com.airbnb.lottie.LottieAnimationView?) returnType:kotlin.Unit
+  VALUE_PARAMETER BOUND_VALUE_PARAMETER name:this$0 index:0 type:com.app.taptap.GameActivity
+  VALUE_PARAMETER BOUND_VALUE_PARAMETER name:bird index:1 type:@[FlexibleNullability] com.airbnb.lottie.LottieAnimationView?
+  BLOCK_BODY
+    VAR name:flyLeftToRight type:kotlin.Boolean [val]
+      CALL 'public open fun nextBoolean (): kotlin.Boolean declared in kotlin.random.Random.Default' type=kotlin.Boolean origin=null
+        $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:Default type:kotlin.random.Random.Default visibility:public [final,static] declared in kotlin.random.Random' type=kotlin.random.Random.Default origin=null
+    VAR name:startY type:kotlin.Float [val]
+      CALL 'public open fun toFloat (): kotlin.Float declared in kotlin.Int' type=kotlin.Float origin=null
+        $this: CALL 'public open fun nextInt (from: kotlin.Int, until: kotlin.Int): kotlin.Int declared in kotlin.random.Random.Default' type=kotlin.Int origin=null
+          $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:Default type:kotlin.random.Random.Default visibility:public [final,static] declared in kotlin.random.Random' type=kotlin.random.Random.Default origin=null
+          from: CONST Int type=kotlin.Int value=80
+          until: CONST Int type=kotlin.Int value=350
+    VAR name:startX type:kotlin.Float [val]
+    VAR name:endX type:kotlin.Float [val]
+    WHEN type=kotlin.Unit origin=IF
+      BRANCH
+        if: GET_VAR 'val flyLeftToRight: kotlin.Boolean [val] declared in com.app.taptap.GameActivity.startRandomBirds$launchBird' type=kotlin.Boolean origin=null
+        then: BLOCK type=kotlin.Unit origin=null
+          SET_VAR 'val startX: kotlin.Float [val] declared in com.app.taptap.GameActivity.startRandomBirds$launchBird' type=kotlin.Unit origin=EQ
+            CONST Float type=kotlin.Float value=-250.0
+          SET_VAR 'val endX: kotlin.Float [val] declared in com.app.taptap.GameActivity.startRandomBirds$launchBird' type=kotlin.Unit origin=EQ
+            CALL 'public final fun plus (other: kotlin.Float): kotlin.Float [operator] declared in kotlin.Int' type=kotlin.Float origin=PLUS
+              $this: GET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:screenWidth type:kotlin.Int visibility:private' type=kotlin.Int origin=null
+                receiver: GET_VAR 'this$0: com.app.taptap.GameActivity declared in com.app.taptap.GameActivity.startRandomBirds$launchBird' type=com.app.taptap.GameActivity origin=null
+              other: CONST Float type=kotlin.Float value=250.0
+          CALL 'public open fun setScaleX (p0: kotlin.Float): kotlin.Unit [fake_override] declared in com.airbnb.lottie.LottieAnimationView' type=kotlin.Unit origin=EQ
+            $this: GET_VAR 'bird: @[FlexibleNullability] com.airbnb.lottie.LottieAnimationView? declared in com.app.taptap.GameActivity.startRandomBirds$launchBird' type=@[FlexibleNullability] com.airbnb.lottie.LottieAnimationView? origin=null
+            p0: CONST Float type=kotlin.Float value=1.0
+      BRANCH
+        if: CONST Boolean type=kotlin.Boolean value=true
+        then: BLOCK type=kotlin.Unit origin=null
+          SET_VAR 'val startX: kotlin.Float [val] declared in com.app.taptap.GameActivity.startRandomBirds$launchBird' type=kotlin.Unit origin=EQ
+            CALL 'public final fun plus (other: kotlin.Float): kotlin.Float [operator] declared in kotlin.Int' type=kotlin.Float origin=PLUS
+              $this: GET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:screenWidth type:kotlin.Int visibility:private' type=kotlin.Int origin=null
+                receiver: GET_VAR 'this$0: com.app.taptap.GameActivity declared in com.app.taptap.GameActivity.startRandomBirds$launchBird' type=com.app.taptap.GameActivity origin=null
+              other: CONST Float type=kotlin.Float value=250.0
+          SET_VAR 'val endX: kotlin.Float [val] declared in com.app.taptap.GameActivity.startRandomBirds$launchBird' type=kotlin.Unit origin=EQ
+            CONST Float type=kotlin.Float value=-250.0
+          CALL 'public open fun setScaleX (p0: kotlin.Float): kotlin.Unit [fake_override] declared in com.airbnb.lottie.LottieAnimationView' type=kotlin.Unit origin=EQ
+            $this: GET_VAR 'bird: @[FlexibleNullability] com.airbnb.lottie.LottieAnimationView? declared in com.app.taptap.GameActivity.startRandomBirds$launchBird' type=@[FlexibleNullability] com.airbnb.lottie.LottieAnimationView? origin=null
+            p0: CONST Float type=kotlin.Float value=-1.0
+    COMPOSITE type=kotlin.Unit origin=null
+      CALL 'public final fun apply <T> (block: @[ExtensionFunctionType] kotlin.Function1<T of kotlin.StandardKt.apply, kotlin.Unit>): T of kotlin.StandardKt.apply [inline] declared in kotlin.StandardKt' type=@[FlexibleNullability] com.airbnb.lottie.LottieAnimationView? origin=null
+        <T>: @[FlexibleNullability] com.airbnb.lottie.LottieAnimationView?
+        $receiver: GET_VAR 'bird: @[FlexibleNullability] com.airbnb.lottie.LottieAnimationView? declared in com.app.taptap.GameActivity.startRandomBirds$launchBird' type=@[FlexibleNullability] com.airbnb.lottie.LottieAnimationView? origin=null
+        block: BLOCK type=@[ExtensionFunctionType] kotlin.Function1<@[FlexibleNullability] com.airbnb.lottie.LottieAnimationView?, kotlin.Unit> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun startRandomBirds$launchBird$lambda$2 ($startX: kotlin.Float, $startY: kotlin.Float): kotlin.Unit declared in com.app.taptap.GameActivity' type=@[ExtensionFunctionType] kotlin.Function1<@[FlexibleNullability] com.airbnb.lottie.LottieAnimationView?, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+            $startX: GET_VAR 'val startX: kotlin.Float [val] declared in com.app.taptap.GameActivity.startRandomBirds$launchBird' type=kotlin.Float origin=null
+            $startY: GET_VAR 'val startY: kotlin.Float [val] declared in com.app.taptap.GameActivity.startRandomBirds$launchBird' type=kotlin.Float origin=null
+      COMPOSITE type=kotlin.Unit origin=null
+    COMPOSITE type=kotlin.Unit origin=null
+      CALL 'public final fun apply <T> (block: @[ExtensionFunctionType] kotlin.Function1<T of kotlin.StandardKt.apply, kotlin.Unit>): T of kotlin.StandardKt.apply [inline] declared in kotlin.StandardKt' type=@[FlexibleNullability] android.animation.ObjectAnimator? origin=null
+        <T>: @[FlexibleNullability] android.animation.ObjectAnimator?
+        $receiver: CALL 'public open fun ofFloat (p0: @[FlexibleNullability] kotlin.Any?, p1: @[FlexibleNullability] kotlin.String?, vararg p2: kotlin.Float): @[FlexibleNullability] android.animation.ObjectAnimator? declared in android.animation.ObjectAnimator' type=@[FlexibleNullability] android.animation.ObjectAnimator? origin=null
+          p0: GET_VAR 'bird: @[FlexibleNullability] com.airbnb.lottie.LottieAnimationView? declared in com.app.taptap.GameActivity.startRandomBirds$launchBird' type=@[FlexibleNullability] com.airbnb.lottie.LottieAnimationView? origin=null
+          p1: CONST String type=kotlin.String value="translationX"
+          p2: BLOCK type=@[FlexibleNullability] kotlin.FloatArray? origin=null
+            VAR IR_TEMPORARY_VARIABLE name:tmp0 type:@[FlexibleNullability] kotlin.FloatArray? [val]
+              CONSTRUCTOR_CALL 'public constructor <init> (size: kotlin.Int) [primary] declared in kotlin.FloatArray' type=@[FlexibleNullability] kotlin.FloatArray? origin=null
+                size: CONST Int type=kotlin.Int value=2
+            CALL 'public final fun set (index: kotlin.Int, value: kotlin.Float): kotlin.Unit [operator] declared in kotlin.FloatArray' type=kotlin.Unit origin=null
+              $this: GET_VAR 'val tmp0: @[FlexibleNullability] kotlin.FloatArray? [val] declared in com.app.taptap.GameActivity.startRandomBirds$launchBird' type=@[FlexibleNullability] kotlin.FloatArray? origin=null
+              index: CONST Int type=kotlin.Int value=0
+              value: GET_VAR 'val startX: kotlin.Float [val] declared in com.app.taptap.GameActivity.startRandomBirds$launchBird' type=kotlin.Float origin=null
+            CALL 'public final fun set (index: kotlin.Int, value: kotlin.Float): kotlin.Unit [operator] declared in kotlin.FloatArray' type=kotlin.Unit origin=null
+              $this: GET_VAR 'val tmp0: @[FlexibleNullability] kotlin.FloatArray? [val] declared in com.app.taptap.GameActivity.startRandomBirds$launchBird' type=@[FlexibleNullability] kotlin.FloatArray? origin=null
+              index: CONST Int type=kotlin.Int value=1
+              value: GET_VAR 'val endX: kotlin.Float [val] declared in com.app.taptap.GameActivity.startRandomBirds$launchBird' type=kotlin.Float origin=null
+            GET_VAR 'val tmp0: @[FlexibleNullability] kotlin.FloatArray? [val] declared in com.app.taptap.GameActivity.startRandomBirds$launchBird' type=@[FlexibleNullability] kotlin.FloatArray? origin=null
+        block: BLOCK type=@[ExtensionFunctionType] kotlin.Function1<@[FlexibleNullability] android.animation.ObjectAnimator?, kotlin.Unit> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun startRandomBirds$launchBird$lambda$4 ($bird: @[FlexibleNullability] com.airbnb.lottie.LottieAnimationView?, this$0: com.app.taptap.GameActivity): kotlin.Unit declared in com.app.taptap.GameActivity' type=@[ExtensionFunctionType] kotlin.Function1<@[FlexibleNullability] android.animation.ObjectAnimator?, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+            $bird: GET_VAR 'bird: @[FlexibleNullability] com.airbnb.lottie.LottieAnimationView? declared in com.app.taptap.GameActivity.startRandomBirds$launchBird' type=@[FlexibleNullability] com.airbnb.lottie.LottieAnimationView? origin=null
+            this$0: GET_VAR 'this$0: com.app.taptap.GameActivity declared in com.app.taptap.GameActivity.startRandomBirds$launchBird' type=com.app.taptap.GameActivity origin=null
+      COMPOSITE type=kotlin.Unit origin=null
+
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate(FunctionCodegen.kt:47)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate$default(FunctionCodegen.kt:40)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generateMethodNode(ClassCodegen.kt:406)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generateMethod(ClassCodegen.kt:423)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generate(ClassCodegen.kt:168)
+	at org.jetbrains.kotlin.backend.jvm.FileCodegen.lower(JvmPhases.kt:39)
+	at org.jetbrains.kotlin.backend.common.phaser.PhaseFactoriesKt.createFilePhase$lambda$4(PhaseFactories.kt:71)
+	at org.jetbrains.kotlin.backend.common.phaser.PhaseBuildersKt$createSimpleNamedCompilerPhase$1.phaseBody(PhaseBuilders.kt:69)
+	at org.jetbrains.kotlin.backend.common.phaser.SimpleNamedCompilerPhase.phaseBody(CompilerPhase.kt:226)
+	at org.jetbrains.kotlin.backend.common.phaser.AbstractNamedCompilerPhase.invoke(CompilerPhase.kt:113)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invokeSequential(performByIrFile.kt:62)
+	... 44 more
+Caused by: java.lang.RuntimeException: Exception while generating code for:
+FUN INLINE_LAMBDA name:startRandomBirds$launchBird$lambda$4 visibility:private modality:FINAL <> ($receiver:@[FlexibleNullability] android.animation.ObjectAnimator?, $bird:@[FlexibleNullability] com.airbnb.lottie.LottieAnimationView?, this$0:com.app.taptap.GameActivity) returnType:kotlin.Unit
+  $receiver: VALUE_PARAMETER name:$this$apply type:@[FlexibleNullability] android.animation.ObjectAnimator?
+  VALUE_PARAMETER BOUND_VALUE_PARAMETER name:$bird index:0 type:@[FlexibleNullability] com.airbnb.lottie.LottieAnimationView?
+  VALUE_PARAMETER BOUND_VALUE_PARAMETER name:this$0 index:1 type:com.app.taptap.GameActivity
+  BLOCK_BODY
+    VAR name:$i$a$-apply-GameActivity$startRandomBirds$launchBird$2 type:kotlin.Int [val]
+      CONST Int type=kotlin.Int value=0
+    CALL 'public open fun setDuration (p0: kotlin.Long): @[EnhancedNullability] android.animation.ObjectAnimator declared in android.animation.ObjectAnimator' type=kotlin.Unit origin=EQ
+      $this: GET_VAR '$this$apply: @[FlexibleNullability] android.animation.ObjectAnimator? declared in com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4' type=@[FlexibleNullability] android.animation.ObjectAnimator? origin=null
+      p0: CALL 'public open fun nextLong (from: kotlin.Long, until: kotlin.Long): kotlin.Long declared in kotlin.random.Random.Default' type=kotlin.Long origin=null
+        $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:Default type:kotlin.random.Random.Default visibility:public [final,static] declared in kotlin.random.Random' type=kotlin.random.Random.Default origin=null
+        from: CONST Long type=kotlin.Long value=5000
+        until: CONST Long type=kotlin.Long value=9000
+    CALL 'public open fun start (): kotlin.Unit declared in android.animation.ObjectAnimator' type=kotlin.Unit origin=null
+      $this: GET_VAR '$this$apply: @[FlexibleNullability] android.animation.ObjectAnimator? declared in com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4' type=@[FlexibleNullability] android.animation.ObjectAnimator? origin=null
+    COMPOSITE type=kotlin.Unit origin=null
+      CALL 'public final fun doOnEnd (action: kotlin.Function1<@[ParameterName(name = "animator")] android.animation.Animator, kotlin.Unit>): android.animation.Animator.AnimatorListener [inline] declared in androidx.core.animation.AnimatorKt' type=android.animation.Animator.AnimatorListener origin=null
+        $receiver: COMPOSITE type=android.animation.ObjectAnimator origin=null
+          CALL 'public final fun checkNotNull (object: kotlin.Any?): kotlin.Unit declared in kotlin.jvm.internal.Intrinsics' type=kotlin.Unit origin=null
+            object: GET_VAR '$this$apply: @[FlexibleNullability] android.animation.ObjectAnimator? declared in com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4' type=@[FlexibleNullability] android.animation.ObjectAnimator? origin=null
+          GET_VAR '$this$apply: @[FlexibleNullability] android.animation.ObjectAnimator? declared in com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4' type=@[FlexibleNullability] android.animation.ObjectAnimator? origin=null
+        action: BLOCK type=kotlin.Function1<android.animation.Animator, kotlin.Unit> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun startRandomBirds$launchBird$lambda$4$lambda$3 ($bird: @[FlexibleNullability] com.airbnb.lottie.LottieAnimationView?, this$0: com.app.taptap.GameActivity, it: android.animation.Animator): kotlin.Unit declared in com.app.taptap.GameActivity' type=kotlin.Function1<android.animation.Animator, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+            $bird: GET_VAR '$bird: @[FlexibleNullability] com.airbnb.lottie.LottieAnimationView? declared in com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4' type=@[FlexibleNullability] com.airbnb.lottie.LottieAnimationView? origin=null
+            this$0: GET_VAR 'this$0: com.app.taptap.GameActivity declared in com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4' type=com.app.taptap.GameActivity origin=null
+      COMPOSITE type=kotlin.Unit origin=null
+
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate(FunctionCodegen.kt:47)
+	at org.jetbrains.kotlin.backend.jvm.codegen.IrSourceCompilerForInline.generateLambdaBody(IrSourceCompilerForInline.kt:67)
+	at org.jetbrains.kotlin.codegen.inline.ExpressionLambda.generateLambdaBody(LambdaInfo.kt:72)
+	at org.jetbrains.kotlin.backend.jvm.codegen.IrInlineCodegen.genValueAndPut(IrInlineCodegen.kt:100)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitCall$handleParameter(ExpressionCodegen.kt:616)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitCall(ExpressionCodegen.kt:644)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitCall(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.expressions.IrCall.accept(IrCall.kt:24)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitStatementContainer(ExpressionCodegen.kt:579)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitContainerExpression(ExpressionCodegen.kt:593)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitContainerExpression(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.visitors.IrElementVisitor$DefaultImpls.visitComposite(IrElementVisitor.kt:125)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitComposite(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitComposite(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.expressions.IrComposite.accept(IrComposite.kt:18)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitStatementContainer(ExpressionCodegen.kt:579)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlockBody(ExpressionCodegen.kt:584)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlockBody(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.expressions.IrBlockBody.accept(IrBlockBody.kt:20)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.generate(ExpressionCodegen.kt:240)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.doGenerate(FunctionCodegen.kt:123)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate(FunctionCodegen.kt:44)
+	... 54 more
+Caused by: java.lang.RuntimeException: Exception while generating code for:
+FUN INLINE_LAMBDA name:startRandomBirds$launchBird$lambda$4$lambda$3 visibility:private modality:FINAL <> ($bird:@[FlexibleNullability] com.airbnb.lottie.LottieAnimationView?, this$0:com.app.taptap.GameActivity, it:android.animation.Animator) returnType:kotlin.Unit
+  VALUE_PARAMETER BOUND_VALUE_PARAMETER name:$bird index:0 type:@[FlexibleNullability] com.airbnb.lottie.LottieAnimationView?
+  VALUE_PARAMETER BOUND_VALUE_PARAMETER name:this$0 index:1 type:com.app.taptap.GameActivity
+  VALUE_PARAMETER name:it index:2 type:android.animation.Animator
+  BLOCK_BODY
+    VAR name:$i$a$-doOnEnd-GameActivity$startRandomBirds$launchBird$2$1 type:kotlin.Int [val]
+      CONST Int type=kotlin.Int value=0
+    CALL 'public open fun cancelAnimation (): kotlin.Unit declared in com.airbnb.lottie.LottieAnimationView' type=kotlin.Unit origin=null
+      $this: GET_VAR '$bird: @[FlexibleNullability] com.airbnb.lottie.LottieAnimationView? declared in com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3' type=@[FlexibleNullability] com.airbnb.lottie.LottieAnimationView? origin=null
+    SET_FIELD 'FIELD IR_EXTERNAL_JAVA_DECLARATION_STUB name:visibility type:kotlin.Int visibility:public [final,static] declared in android.R.attr' type=kotlin.Unit superQualifierSymbol=android.R.attr origin=EQ
+      value: CONST Int type=kotlin.Int value=8
+    COMPOSITE type=kotlin.Unit origin=null
+      CALL 'public final fun postDelayed (p0: @[EnhancedNullability] java.lang.Runnable, p1: kotlin.Long): kotlin.Boolean declared in android.os.Handler' type=kotlin.Boolean origin=null
+        $this: CALL 'public final fun access$getHandler$p ($this: com.app.taptap.GameActivity): android.os.Handler declared in com.app.taptap.GameActivity' type=android.os.Handler origin=null
+          $this: GET_VAR 'this$0: com.app.taptap.GameActivity declared in com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3' type=com.app.taptap.GameActivity origin=null
+        p0: BLOCK type=com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3.<no name provided> origin=null
+          CLASS LAMBDA_IMPL CLASS name:<no name provided> modality:FINAL visibility:public/*package*/ superTypes:[@[RawType] java.lang.Runnable]
+            $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3.<no name provided>
+            CONSTRUCTOR GENERATED_MEMBER_IN_CALLABLE_REFERENCE visibility:public/*package*/ <> (this$0:com.app.taptap.GameActivity, $bird:@[FlexibleNullability] com.airbnb.lottie.LottieAnimationView?) returnType:com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3.<no name provided> [primary]
+              VALUE_PARAMETER BOUND_RECEIVER_PARAMETER name:this$0 index:0 type:com.app.taptap.GameActivity
+              VALUE_PARAMETER BOUND_VALUE_PARAMETER name:$bird index:1 type:@[FlexibleNullability] com.airbnb.lottie.LottieAnimationView?
+              BLOCK_BODY
+                SET_FIELD 'FIELD FIELD_FOR_CAPTURED_VALUE name:this$0 type:com.app.taptap.GameActivity visibility:public/*package*/ [final] declared in com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3.<no name provided>' type=kotlin.Unit origin=INITIALIZER_OF_FIELD_FOR_CAPTURED_VALUE
+                  receiver: GET_VAR '<this>: com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3.<no name provided> declared in com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3.<no name provided>' type=com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3.<no name provided> origin=null
+                  value: GET_VAR 'this$0: com.app.taptap.GameActivity declared in com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3.<no name provided>.<init>' type=com.app.taptap.GameActivity origin=null
+                SET_FIELD 'FIELD FIELD_FOR_CAPTURED_VALUE name:$bird type:@[FlexibleNullability] com.airbnb.lottie.LottieAnimationView? visibility:public/*package*/ [final] declared in com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3.<no name provided>' type=kotlin.Unit origin=INITIALIZER_OF_FIELD_FOR_CAPTURED_VALUE
+                  receiver: GET_VAR '<this>: com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3.<no name provided> declared in com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3.<no name provided>' type=com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3.<no name provided> origin=null
+                  value: GET_VAR '$bird: @[FlexibleNullability] com.airbnb.lottie.LottieAnimationView? declared in com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3.<no name provided>.<init>' type=@[FlexibleNullability] com.airbnb.lottie.LottieAnimationView? origin=null
+                DELEGATING_CONSTRUCTOR_CALL 'public constructor <init> () [primary] declared in kotlin.Any'
+                BLOCK type=kotlin.Unit origin=null
+            FUN name:run visibility:public modality:FINAL <> ($this:com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3.<no name provided>) returnType:kotlin.Unit
+              overridden:
+                public abstract fun run (): kotlin.Unit declared in java.lang.Runnable
+              $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3.<no name provided>
+              BLOCK_BODY
+                CALL 'public final fun access$startRandomBirds$launchBird (this$0: com.app.taptap.GameActivity, bird: @[FlexibleNullability] com.airbnb.lottie.LottieAnimationView?): kotlin.Unit declared in com.app.taptap.GameActivity' type=kotlin.Unit origin=null
+                  this$0: GET_FIELD 'FIELD FIELD_FOR_CAPTURED_VALUE name:this$0 type:com.app.taptap.GameActivity visibility:public/*package*/ [final] declared in com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3.<no name provided>' type=com.app.taptap.GameActivity origin=null
+                    receiver: GET_VAR '<this>: com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3.<no name provided> declared in com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3.<no name provided>.run' type=com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3.<no name provided> origin=null
+                  bird: GET_FIELD 'FIELD FIELD_FOR_CAPTURED_VALUE name:$bird type:@[FlexibleNullability] com.airbnb.lottie.LottieAnimationView? visibility:public/*package*/ [final] declared in com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3.<no name provided>' type=@[FlexibleNullability] com.airbnb.lottie.LottieAnimationView? origin=null
+                    receiver: GET_VAR '<this>: com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3.<no name provided> declared in com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3.<no name provided>.run' type=com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3.<no name provided> origin=null
+            FIELD FIELD_FOR_CAPTURED_VALUE name:this$0 type:com.app.taptap.GameActivity visibility:public/*package*/ [final]
+            FIELD FIELD_FOR_CAPTURED_VALUE name:$bird type:@[FlexibleNullability] com.airbnb.lottie.LottieAnimationView? visibility:public/*package*/ [final]
+          CONSTRUCTOR_CALL 'public/*package*/ constructor <init> (this$0: com.app.taptap.GameActivity, $bird: @[FlexibleNullability] com.airbnb.lottie.LottieAnimationView?) [primary] declared in com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3.<no name provided>' type=com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3.<no name provided> origin=null
+            this$0: GET_VAR 'this$0: com.app.taptap.GameActivity declared in com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3' type=com.app.taptap.GameActivity origin=null
+            $bird: GET_VAR '$bird: @[FlexibleNullability] com.airbnb.lottie.LottieAnimationView? declared in com.app.taptap.GameActivity.startRandomBirds$launchBird$lambda$4$lambda$3' type=@[FlexibleNullability] com.airbnb.lottie.LottieAnimationView? origin=null
+        p1: CALL 'public open fun nextLong (from: kotlin.Long, until: kotlin.Long): kotlin.Long declared in kotlin.random.Random.Default' type=kotlin.Long origin=null
+          $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:Default type:kotlin.random.Random.Default visibility:public [final,static] declared in kotlin.random.Random' type=kotlin.random.Random.Default origin=null
+          from: CONST Long type=kotlin.Long value=8000
+          until: CONST Long type=kotlin.Long value=20000
+      COMPOSITE type=kotlin.Unit origin=null
+
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate(FunctionCodegen.kt:47)
+	at org.jetbrains.kotlin.backend.jvm.codegen.IrSourceCompilerForInline.generateLambdaBody(IrSourceCompilerForInline.kt:67)
+	at org.jetbrains.kotlin.codegen.inline.ExpressionLambda.generateLambdaBody(LambdaInfo.kt:72)
+	at org.jetbrains.kotlin.backend.jvm.codegen.IrInlineCodegen.genValueAndPut(IrInlineCodegen.kt:100)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitCall$handleParameter(ExpressionCodegen.kt:616)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitCall(ExpressionCodegen.kt:644)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitCall(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.expressions.IrCall.accept(IrCall.kt:24)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitStatementContainer(ExpressionCodegen.kt:579)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitContainerExpression(ExpressionCodegen.kt:593)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitContainerExpression(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.visitors.IrElementVisitor$DefaultImpls.visitComposite(IrElementVisitor.kt:125)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitComposite(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitComposite(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.expressions.IrComposite.accept(IrComposite.kt:18)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitStatementContainer(ExpressionCodegen.kt:579)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlockBody(ExpressionCodegen.kt:584)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlockBody(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.expressions.IrBlockBody.accept(IrBlockBody.kt:20)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.generate(ExpressionCodegen.kt:240)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.doGenerate(FunctionCodegen.kt:123)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate(FunctionCodegen.kt:44)
+	... 75 more
+Caused by: java.lang.AssertionError: access of const val: SET_FIELD 'FIELD IR_EXTERNAL_JAVA_DECLARATION_STUB name:visibility type:kotlin.Int visibility:public [final,static] declared in android.R.attr' type=kotlin.Unit superQualifierSymbol=android.R.attr origin=EQ
+  value: CONST Int type=kotlin.Int value=8
+
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitFieldAccess(ExpressionCodegen.kt:861)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitFieldAccess(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.visitors.IrElementVisitor$DefaultImpls.visitSetField(IrElementVisitor.kt:206)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitSetField(ExpressionCodegen.kt:908)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitSetField(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.expressions.IrSetField.accept(IrSetField.kt:21)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitStatementContainer(ExpressionCodegen.kt:579)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlockBody(ExpressionCodegen.kt:584)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlockBody(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.expressions.IrBlockBody.accept(IrBlockBody.kt:20)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.generate(ExpressionCodegen.kt:240)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.doGenerate(FunctionCodegen.kt:123)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate(FunctionCodegen.kt:44)
+	... 96 more
+
+
