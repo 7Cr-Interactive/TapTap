@@ -2,60 +2,52 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Background Image properly scaled -->
     <ImageView
         android:id="@+id/backgroundImage"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:src="@drawable/background_wallpaper"
-        android:scaleType="centerCrop"
-        android:adjustViewBounds="true" />
+        android:scaleType="centerCrop" />
 
-    <!-- Start Game Button -->
-    <Button
-        android:id="@+id/startButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Start"
-        android:layout_alignParentBottom="true"
-        android:layout_marginBottom="100dp"
-        android:layout_centerHorizontal="true" />
-
-    <!-- High Score Button -->
-    <Button
-        android:id="@+id/highscoreButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Highscore"
-        android:layout_alignParentBottom="true"
-        android:layout_marginBottom="30dp"
-        android:layout_centerHorizontal="true" />
     <TextView
         android:id="@+id/helpTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Help?"
-        android:textColor="@android:color/holo_blue_dark"
-        android:textSize="16sp"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="20dp"
-        android:layout_marginLeft="20dp"
-        android:clickable="true"
-        android:focusable="true"
+        android:textColor="#090909"
+        android:layout_alignParentTop="true"
+        android:layout_margin="20dp"
         android:textStyle="bold" />
-    <TextView
-        android:id="@+id/developer"
-        android:layout_width="wrap_content"
+
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="7Cr Interactive"
-        android:textColor="@android:color/white"
-        android:textSize="10sp"
-        android:textStyle="italic"
-        android:clickable="true"
-        android:focusable="true"
         android:layout_alignParentBottom="true"
-        android:layout_alignParentEnd="true"
-        android:layout_marginBottom="25dp"
-        android:layout_marginEnd="16dp" />
+        android:layout_marginBottom="50dp"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <Button
+            android:id="@+id/startButton"
+            android:layout_width="240dp"
+            android:layout_height="64dp"
+            android:text="START GAME"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/glass_button_bg"
+            android:elevation="4dp"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp" />
+
+        <Button
+            android:id="@+id/highscoreButton"
+            android:layout_width="200dp"
+            android:layout_height="50dp"
+            android:text="Highscores"
+            android:textColor="#E0E0E0"
+            android:background="@android:color/transparent"
+            android:textAllCaps="false" />
+
+    </LinearLayout>
 
 </RelativeLayout>

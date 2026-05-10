@@ -7,13 +7,16 @@
         android:icon="@drawable/game_logo"
         android:roundIcon="@drawable/game_logo"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.Light.NoActionBar"
-        android:background="@android:color/transparent">
+        android:hardwareAccelerated="true"
+        android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+
         <activity android:name="com.app.taptap.HelpActivity" />
         <activity android:name="com.app.taptap.HighScoreActivity" />
+
         <activity
             android:name="com.app.taptap.GameActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait" />
 
         <activity
             android:name="com.app.taptap.MainActivity"

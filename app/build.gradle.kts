@@ -8,10 +8,10 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.taptap"
+        applicationId = "com.app.taptap"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
+        versionCode = 2
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -46,6 +46,7 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.core.animation)
     testImplementation(libs.junit)
+    implementation("com.airbnb.android:lottie:6.4.0")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

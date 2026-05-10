@@ -1,29 +1,78 @@
-<?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/gameLayout"
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"    android:id="@+id/gameLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/game_bg">
+    android:background="@drawable/bg_sky">
 
-    <!-- Score Text -->
-    <TextView
-        android:id="@+id/scoreText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Score: 0"
-        android:textSize="24sp"
-        android:textColor="#FFFFFF"
-        android:layout_margin="16dp"
-        android:layout_gravity="top|start" />
+    <View
+        android:id="@+id/sunView"
+        android:layout_width="140dp"
+        android:layout_height="140dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginStart="20dp"
+        android:alpha="0.85"
+        android:background="@drawable/sun_glow"/>
+    <!-- 🌿 FAR GRASS (slightly behind feel) -->
+    <com.airbnb.lottie.LottieAnimationView
+        android:id="@+id/bgAnimation"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:alpha="0.35"
+        app:lottie_autoPlay="true"
+        app:lottie_loop="true"
+        app:lottie_fileName="game_bg_anim.json"/>
+    <com.airbnb.lottie.LottieAnimationView
+        android:id="@+id/birdView"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:visibility="gone"/>
 
-    <!-- Timer Text (optional if using countdown) -->
-    <TextView
-        android:id="@+id/timerText"
-        android:layout_width="wrap_content"
+    <!-- ✨ Floating particles -->
+    <FrameLayout
+        android:id="@+id/particleLayer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+    <!-- 🔥 HUD -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Time: 15s"
-        android:textSize="24sp"
-        android:textColor="#FFFFFF"
-        android:layout_margin="16dp"
-        android:layout_gravity="top|end" />
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/scoreText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/score_pill_bg"
+                android:text="Score: 0"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                android:textSize="18sp"
+                android:padding="8dp"/>
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1"/>
+        </LinearLayout>
+
+        <ProgressBar
+            android:id="@+id/timeBar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="14dp"
+            android:max="100"
+            android:progress="100"
+            android:layout_marginTop="10dp"/>
+    </LinearLayout>
+
 </FrameLayout>
