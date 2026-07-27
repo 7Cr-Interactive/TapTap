@@ -2,7 +2,9 @@ package com.app.taptap
 
 import android.widget.TextView
 import android.content.Intent
+import android.media.AudioAttributes
 import android.media.MediaPlayer
+import android.media.SoundPool
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -11,16 +13,20 @@ import android.view.WindowInsetsController
 import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AlertDialog
+import com.app.bubblepop.GameActivity
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var launchMusic: MediaPlayer
+    private lateinit var soundPool: SoundPool
+    private var bubbleSoundId = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         enableImmersiveMode()
+        setupSoundPool()
 
         // Initialize launch music
         launchMusic = MediaPlayer.create(this, R.raw.launch_music).apply {
@@ -30,26 +36,49 @@ class MainActivity : AppCompatActivity() {
 
         val helpTextView: TextView = findViewById(R.id.helpTextView)
         helpTextView.setOnClickListener {
+            playClickSound()
             val intent = Intent(this, HelpActivity::class.java)
             startActivity(intent)
         }
 
         val startButton: Button = findViewById(R.id.startButton)
+        val zipModeButton: Button = findViewById(R.id.zipModeButton)
         val highscoreButton: Button = findViewById(R.id.highscoreButton)
 
         startButton.setOnClickListener {
-            if (launchMusic.isPlaying) {
-                launchMusic.pause()
-            }
-            val intent = Intent(this, GameActivity::class.java)
-            startActivity(intent)
+            playClickSound()
+            startGame("NORMAL")
+        }
+
+        zipModeButton.setOnClickListener {
+            playClickSound()
+            startGame("ZIP")
         }
 
         highscoreButton.setOnClickListener {
+            playClickSound()
             val intent = Intent(this, HighScoreActivity::class.java)
-            intent.putExtra("SHOW_FOR_5_SEC", false)
             startActivity(intent)
         }
+    }
+
+    private fun setupSoundPool() {
+        val attr = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME).build()
+        soundPool = SoundPool.Builder().setMaxStreams(2).setAudioAttributes(attr).build()
+        bubbleSoundId = soundPool.load(this, R.raw.bubble_pop, 1)
+    }
+
+    private fun playClickSound() {
+        soundPool.play(bubbleSoundId, 1f, 1f, 1, 0, 1f)
+    }
+
+    private fun startGame(mode: String) {
+        if (launchMusic.isPlaying) {
+            launchMusic.pause()
+        }
+        val intent = Intent(this, GameActivity::class.java)
+        intent.putExtra("GAME_MODE", mode)
+        startActivity(intent)
     }
 
     override fun onResume() {
@@ -71,6 +100,7 @@ class MainActivity : AppCompatActivity() {
         if (::launchMusic.isInitialized) {
             launchMusic.release()
         }
+        soundPool.release()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

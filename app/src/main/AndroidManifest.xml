@@ -14,7 +14,7 @@
         <activity android:name="com.app.taptap.HighScoreActivity" />
 
         <activity
-            android:name="com.app.taptap.GameActivity"
+            android:name="com.app.bubblepop.GameActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
 

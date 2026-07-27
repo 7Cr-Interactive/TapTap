@@ -32,7 +32,18 @@
             android:id="@+id/startButton"
             android:layout_width="240dp"
             android:layout_height="64dp"
-            android:text="START GAME"
+            android:text="NORMAL MODE"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/glass_button_bg"
+            android:elevation="4dp"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp" />
+
+        <Button
+            android:id="@+id/zipModeButton"
+            android:layout_width="240dp"
+            android:layout_height="64dp"
+            android:text="3 MIN ZIP"
             android:textColor="#FFFFFF"
             android:background="@drawable/glass_button_bg"
             android:elevation="4dp"

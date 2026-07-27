@@ -6,12 +6,14 @@ import org.json.JSONObject
 
 object HighScoreManager {
     private const val PREF_NAME = "high_scores"
-    private const val KEY_SCORES = "scores"
+    private const val KEY_SCORES_NORMAL = "scores_normal"
+    private const val KEY_SCORES_ZIP = "scores_zip"
     private const val MAX_SCORES = 5
 
-    fun saveScore(context: Context, name: String, score: Int) {
+    fun saveScore(context: Context, name: String, score: Int, mode: String = "NORMAL") {
         val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-        val jsonString = prefs.getString(KEY_SCORES, "[]") ?: "[]"
+        val key = if (mode == "ZIP") KEY_SCORES_ZIP else KEY_SCORES_NORMAL
+        val jsonString = prefs.getString(key, "[]") ?: "[]"
         val scoresArray = JSONArray(jsonString)
 
         // Add new score
@@ -33,12 +35,13 @@ object HighScoreManager {
             trimmedScores.put(sortedScores[i])
         }
 
-        prefs.edit().putString(KEY_SCORES, trimmedScores.toString()).apply()
+        prefs.edit().putString(key, trimmedScores.toString()).apply()
     }
 
-    fun getScores(context: Context): List<Pair<String, Int>> {
+    fun getScores(context: Context, mode: String = "NORMAL"): List<Pair<String, Int>> {
         val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-        val jsonString = prefs.getString(KEY_SCORES, "[]") ?: "[]"
+        val key = if (mode == "ZIP") KEY_SCORES_ZIP else KEY_SCORES_NORMAL
+        val jsonString = prefs.getString(key, "[]") ?: "[]"
         val scoresArray = JSONArray(jsonString)
 
         val scoresList = mutableListOf<Pair<String, Int>>()
@@ -50,10 +53,15 @@ object HighScoreManager {
         }
         return scoresList
     }
-    fun clearScores(context: Context) {
-        val prefs = context.getSharedPreferences("high_scores", Context.MODE_PRIVATE)
-        prefs.edit().clear().apply()
+
+    fun clearScores(context: Context, mode: String = "NORMAL") {
+        val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        val key = if (mode == "ZIP") KEY_SCORES_ZIP else KEY_SCORES_NORMAL
+        prefs.edit().remove(key).apply()
     }
 
-
+    fun clearAllScores(context: Context) {
+        val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        prefs.edit().clear().apply()
+    }
 }

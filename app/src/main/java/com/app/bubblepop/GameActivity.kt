@@ -1,4 +1,4 @@
-package com.app.taptap
+package com.app.bubblepop
 
 import android.animation.*
 import android.app.AlertDialog
@@ -24,12 +24,19 @@ import kotlin.random.Random
 import android.animation.ObjectAnimator
 import androidx.core.animation.doOnEnd
 
+// Explicitly import components from the taptap package
+import com.app.taptap.R
+import com.app.taptap.BubbleView
+import com.app.taptap.HighScoreManager
+import com.app.taptap.HighScoreActivity
+
 class GameActivity : AppCompatActivity() {
 
     private lateinit var gameLayout: FrameLayout
     private lateinit var scoreText: TextView
     private lateinit var comboPraiseText: TextView
     private lateinit var timeBar: ProgressBar
+    private lateinit var modeIndicatorText: TextView
 
     private lateinit var gameMusic: MediaPlayer
     private lateinit var soundPool: SoundPool
@@ -39,9 +46,10 @@ class GameActivity : AppCompatActivity() {
 
     private var score = 0
     private var combo = 0
+    private var gameMode = "NORMAL"
 
     // ⏱️ Millisecond Core Engine Constants
-    private val MAX_TIME_MS = 100000.0
+    private var MAX_TIME_MS = 100000.0
     private var timeProgressMs = MAX_TIME_MS
 
     private val handler = Handler(Looper.getMainLooper())
@@ -66,6 +74,14 @@ class GameActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_game)
 
+        gameMode = intent.getStringExtra("GAME_MODE") ?: "NORMAL"
+        
+        if (gameMode == "ZIP") {
+            MAX_TIME_MS = 180000.0 // 3 minutes
+        } else {
+            MAX_TIME_MS = 100000.0
+        }
+
         val bgAnim = findViewById<LottieAnimationView>(R.id.bgAnimation)
         bgAnim.scaleX = 1f
         bgAnim.scaleY = 1f
@@ -81,6 +97,19 @@ class GameActivity : AppCompatActivity() {
 
         gameLayout = findViewById(R.id.gameLayout)
         scoreText = findViewById(R.id.scoreText)
+        
+        modeIndicatorText = TextView(this).apply {
+            text = if (gameMode == "ZIP") "3 MIN ZIP" else "NORMAL"
+            textSize = 14f
+            setTextColor(Color.WHITE)
+            alpha = 0.5f
+            gravity = Gravity.END
+            val p = FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT)
+            p.gravity = Gravity.TOP or Gravity.END
+            p.setMargins(0, 40, 40, 0)
+            layoutParams = p
+        }
+        gameLayout.addView(modeIndicatorText)
 
         timeBar = findViewById(R.id.timeBar)
         timeBar.max = MAX_TIME_MS.toInt()
@@ -136,8 +165,8 @@ class GameActivity : AppCompatActivity() {
         return false
     }
 
-    // 📈 Re-balanced: Cap maximum concurrent nails at 5 instead of 8 to maintain screen clarity
     private fun getMaxNails(): Int {
+        if (gameMode == "ZIP") return 5
         return when {
             score > 150 -> 5
             score > 90  -> 4
@@ -209,8 +238,11 @@ class GameActivity : AppCompatActivity() {
         bubbleSpawner = object : Runnable {
             override fun run() {
                 spawnBubble()
-                // Balanced: Slowed down generation speed curve (scales down to 450ms floor instead of 350ms)
-                val interval = (1100 - (score * 2.5)).toLong().coerceAtLeast(450L)
+                val interval = if (gameMode == "ZIP") {
+                    400L
+                } else {
+                    (1100 - (score * 2.5)).toLong().coerceAtLeast(450L)
+                }
                 handler.postDelayed(this, interval)
             }
         }
@@ -224,8 +256,11 @@ class GameActivity : AppCompatActivity() {
                     spawnNail()
                     consecutiveNails++
                 }
-                // Balanced: Added more breathing room between obstacle spawns (700ms floor minimum)
-                val interval = (1600L - (score * 3L)).coerceAtLeast(700L)
+                val interval = if (gameMode == "ZIP") {
+                    650L
+                } else {
+                    (1600L - (score * 3L)).coerceAtLeast(700L)
+                }
                 handler.postDelayed(this, interval)
             }
         }
@@ -233,13 +268,22 @@ class GameActivity : AppCompatActivity() {
     }
 
     private fun spawnBubble() {
-        // Balanced: Gentle precision scaling. Bubbles shrink slower (Min: 100px instead of 75px)
-        val size = (240 - (score * 0.4f).toInt()).coerceAtLeast(100)
+        // ZIP Mode bubbles: random large size (350-550) and no shrinking.
+        // NORMAL mode: standard shrinking mechanic (down to 100).
+        val size = if (gameMode == "ZIP") {
+            Random.nextInt(350, 551)
+        } else {
+            (240 - (score * 0.4f).toInt()).coerceAtLeast(100)
+        }
+        
         val view = BubbleView(this)
 
         val params = FrameLayout.LayoutParams(size, size)
         params.leftMargin = Random.nextInt(0, (screenWidth - size).coerceAtLeast(1))
-        params.topMargin = Random.nextInt(200, (screenHeight - size - 150).coerceAtLeast(1))
+        // Position buffer to keep bubbles within viewable area
+        val topFloor = 200
+        val topCeiling = (screenHeight - size - 150).coerceAtLeast(topFloor + 1)
+        params.topMargin = Random.nextInt(topFloor, topCeiling)
         view.layoutParams = params
 
         val despawnRunnable = Runnable {
@@ -263,32 +307,35 @@ class GameActivity : AppCompatActivity() {
             showParticleBurst(view.x + size / 2, view.y + size / 2)
             playPopAnimation(view)
 
-            // Balanced: Standardized time returns to keep the game stable under high score runs
-            val refillMs = (8000.0 - (score * 15.0)).coerceAtLeast(4000.0)
-            val comboBonusMs = (combo * 150.0).coerceAtMost(3000.0)
+            if (gameMode == "NORMAL") {
+                val refillMs = (8000.0 - (score * 15.0)).coerceAtLeast(4000.0)
+                val comboBonusMs = (combo * 150.0).coerceAtMost(3000.0)
 
-            positiveTimeAnimator?.cancel()
-
-            val oldTime = timeProgressMs
-            timeProgressMs = (timeProgressMs + refillMs + comboBonusMs).coerceAtMost(MAX_TIME_MS)
-
-            animatePositiveTimeGain(oldTime.toInt(), timeProgressMs.toInt())
+                positiveTimeAnimator?.cancel()
+                val oldTime = timeProgressMs
+                timeProgressMs = (timeProgressMs + refillMs + comboBonusMs).coerceAtMost(MAX_TIME_MS)
+                animatePositiveTimeGain(oldTime.toInt(), timeProgressMs.toInt())
+            }
 
             consecutiveNails = 0
         }
 
         gameLayout.addView(view)
 
-        // Balanced: Gave the user more baseline time to hit individual bubbles (Min floor: 600ms)
-        val lifetime = (2200L - (score * 5L)).coerceAtLeast(600L)
+        val lifetime = if (gameMode == "ZIP") {
+            600L
+        } else {
+            (2200L - (score * 5L)).coerceAtLeast(600L)
+        }
         handler.postDelayed(despawnRunnable, lifetime)
     }
 
     private fun spawnNail() {
-        // 🛠️ Balanced Growing Nails:
-        // Changed growth modifier from 1.2f down to 0.6f.
-        // Max size capped at 320px instead of 450px so they don't completely block the layout.
-        val size = (160 + (score * 0.6f).toInt()).coerceAtMost(320)
+        val size = if (gameMode == "ZIP") {
+            280
+        } else {
+            (160 + (score * 0.6f).toInt()).coerceAtMost(320)
+        }
 
         val view = ImageView(this).apply {
             setImageResource(R.drawable.nail)
@@ -301,7 +348,9 @@ class GameActivity : AppCompatActivity() {
 
         val params = FrameLayout.LayoutParams(size, size)
         params.leftMargin = Random.nextInt(0, (screenWidth - size).coerceAtLeast(1))
-        params.topMargin = Random.nextInt(200, (screenHeight - size - 150).coerceAtLeast(1))
+        val topFloor = 200
+        val topCeiling = (screenHeight - size - 150).coerceAtLeast(topFloor + 1)
+        params.topMargin = Random.nextInt(topFloor, topCeiling)
         view.layoutParams = params
 
         val despawnRunnable = Runnable {
@@ -317,45 +366,44 @@ class GameActivity : AppCompatActivity() {
         view.setOnClickListener {
             handler.removeCallbacks(despawnRunnable)
             combo = 0
-            score = (score - 3).coerceAtLeast(0) // Reduced score penalty from -4 to -3
+            score = (score - 3).coerceAtLeast(0)
             updateScore()
 
             soundPool.play(hitSoundId, 1f, 1f, 1, 0, 0.65f)
             shakeScreen()
             showParticleBurst(view.x + size / 2, view.y + size / 2)
 
-            positiveTimeAnimator?.cancel()
-            // Reduced time penalty from 15% (15000ms) to 10% (10000ms) for fewer immediate deaths
-            timeProgressMs = (timeProgressMs - 10000.0).coerceAtLeast(0.0)
-
-            updateTimeBarDirect()
+            if (gameMode == "NORMAL") {
+                positiveTimeAnimator?.cancel()
+                timeProgressMs = (timeProgressMs - 10000.0).coerceAtLeast(0.0)
+                updateTimeBarDirect()
+            }
 
             if (view.parent != null) gameLayout.removeView(view)
         }
 
         gameLayout.addView(view)
 
-        // Balanced: Nails stick around slightly longer, making them strategic obstacles instead of fast traps
-        val lifetime = (2400L - (score * 4L)).coerceAtLeast(900L)
+        val lifetime = if (gameMode == "ZIP") {
+            800L
+        } else {
+            (2400L - (score * 4L)).coerceAtLeast(900L)
+        }
         handler.postDelayed(despawnRunnable, lifetime)
     }
-
-    // ---------------- MILLISECOND TIMER ENGINE ----------------
 
     private fun startTimer() {
         timerRunnable = object : Runnable {
             override fun run() {
                 val isAnimatingGain = positiveTimeAnimator?.isRunning == true
 
-                // 📈 Re-Balanced Time Decay Calculation:
-                // Base cost lowered from 4000ms to 3500ms per second.
-                // Multiplier cut in half from 75.0 down to 30.0 per point.
-                // This preserves uncapped difficulty but heavily softens the early/mid game transition.
-                val baseDrainPerSec = 3500.0
-                val addedDrainPerSec = score * 30.0
-                val totalDrainPerSec = baseDrainPerSec + addedDrainPerSec
+                val drainPerSec = if (gameMode == "ZIP") {
+                    1000.0
+                } else {
+                    3500.0 + (score * 30.0)
+                }
 
-                val frameDrain = totalDrainPerSec * (TIMER_TICK_MS / 1000.0)
+                val frameDrain = drainPerSec * (TIMER_TICK_MS / 1000.0)
                 timeProgressMs -= frameDrain
 
                 if (timeProgressMs <= 0.0) {
@@ -373,8 +421,6 @@ class GameActivity : AppCompatActivity() {
         }
         timerHandler.postDelayed(timerRunnable, TIMER_TICK_MS)
     }
-
-    // ---------------- UI INTERPOLATION ----------------
 
     private fun updateScore() {
         scoreText.text = "Score: $score"
@@ -421,8 +467,6 @@ class GameActivity : AppCompatActivity() {
                     .withEndAction { comboPraiseText.visibility = View.GONE }
             }
     }
-
-    // ---------------- REALTIME TIME BAR TRACKING ----------------
 
     private fun updateTimeBarDirect() {
         val targetProgress = timeProgressMs.toInt()
@@ -471,8 +515,6 @@ class GameActivity : AppCompatActivity() {
             }
         }
     }
-
-    // ---------------- VISUAL EFFECTS ----------------
 
     private fun playPopAnimation(view: View) {
         val sx = ObjectAnimator.ofFloat(view, "scaleX", 1f, 1.2f)
@@ -530,8 +572,6 @@ class GameActivity : AppCompatActivity() {
             .setDuration(400).start()
     }
 
-    // ---------------- TERMINATION ----------------
-
     private fun gameOver() {
         gameMusic.stop()
         handler.removeCallbacksAndMessages(null)
@@ -544,7 +584,7 @@ class GameActivity : AppCompatActivity() {
             .setView(input)
             .setCancelable(false)
             .setPositiveButton("Submit") { _, _ ->
-                HighScoreManager.saveScore(this, input.text.toString().ifEmpty { "Player" }, score)
+                HighScoreManager.saveScore(this, input.text.toString().ifEmpty { "Player" }, score, gameMode)
                 startActivity(Intent(this, HighScoreActivity::class.java))
                 finish()
             }.show()
