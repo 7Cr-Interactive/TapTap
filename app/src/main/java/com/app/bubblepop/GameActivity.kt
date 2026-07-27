@@ -23,7 +23,7 @@ import kotlin.math.max
 import kotlin.random.Random
 import android.animation.ObjectAnimator
 import androidx.core.animation.doOnEnd
-import androidx.core.animation.doOnEnd
+
 class GameActivity : AppCompatActivity() {
 
     private lateinit var gameLayout: FrameLayout
@@ -39,7 +39,10 @@ class GameActivity : AppCompatActivity() {
 
     private var score = 0
     private var combo = 0
-    private var timeProgress = 100
+
+    // ⏱️ Millisecond Core Engine Constants
+    private val MAX_TIME_MS = 100000.0
+    private var timeProgressMs = MAX_TIME_MS
 
     private val handler = Handler(Looper.getMainLooper())
     private val timerHandler = Handler(Looper.getMainLooper())
@@ -48,25 +51,29 @@ class GameActivity : AppCompatActivity() {
     private var nailSpawner: Runnable? = null
     private lateinit var timerRunnable: Runnable
 
+    private val TIMER_TICK_MS = 50L
+
     private var screenWidth = 0
     private var screenHeight = 0
 
-    // 🎯 Director state
     private var consecutiveNails = 0
-
+    private var isDyingShakeActive = false
     private val praises = listOf("NICE!", "AWESOME!", "SUPER!", "FANTASTIC!", "PERFECT!")
+
+    private var positiveTimeAnimator: ValueAnimator? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_game)
-        val bgAnim = findViewById<LottieAnimationView>(R.id.bgAnimation)
 
+        val bgAnim = findViewById<LottieAnimationView>(R.id.bgAnimation)
         bgAnim.scaleX = 1f
         bgAnim.scaleY = 1f
         startRandomBirds()
         bgAnim.setRenderMode(RenderMode.HARDWARE)
         bgAnim.repeatCount = LottieDrawable.INFINITE
         bgAnim.speed = 1f
+
         val metrics = DisplayMetrics()
         windowManager.defaultDisplay.getMetrics(metrics)
         screenWidth = metrics.widthPixels
@@ -74,7 +81,9 @@ class GameActivity : AppCompatActivity() {
 
         gameLayout = findViewById(R.id.gameLayout)
         scoreText = findViewById(R.id.scoreText)
+
         timeBar = findViewById(R.id.timeBar)
+        timeBar.max = MAX_TIME_MS.toInt()
 
         setupComboTextView()
         setupSoundPool()
@@ -92,26 +101,18 @@ class GameActivity : AppCompatActivity() {
         startFlowerParticles()
         startGame()
     }
+
     private fun animateSun() {
         val sun = findViewById<View>(R.id.sunView)
-
-        // 🌟 Soft breathing scale
         val scaleX = ObjectAnimator.ofFloat(sun, View.SCALE_X, 1f, 1.08f)
         val scaleY = ObjectAnimator.ofFloat(sun, View.SCALE_Y, 1f, 1.08f)
-
-        // 🌞 Gentle vertical float (very subtle)
         val floatY = ObjectAnimator.ofFloat(sun, View.TRANSLATION_Y, 0f, -20f)
 
-        scaleX.repeatCount = ValueAnimator.INFINITE
-        scaleX.repeatMode = ValueAnimator.REVERSE
+        listOf(scaleX, scaleY, floatY).forEach {
+            it.repeatCount = ValueAnimator.INFINITE
+            it.repeatMode = ValueAnimator.REVERSE
+        }
 
-        scaleY.repeatCount = ValueAnimator.INFINITE
-        scaleY.repeatMode = ValueAnimator.REVERSE
-
-        floatY.repeatCount = ValueAnimator.INFINITE
-        floatY.repeatMode = ValueAnimator.REVERSE
-
-        // 🎯 Combine animations
         AnimatorSet().apply {
             playTogether(scaleX, scaleY, floatY)
             duration = 5000
@@ -119,7 +120,8 @@ class GameActivity : AppCompatActivity() {
             start()
         }
     }
-    // ---------------- DIRECTOR ----------------
+
+    // ---------------- DIRECTING STATE ----------------
 
     private fun shouldForceBubble(): Boolean {
         if (!hasBubbleOnScreen()) return true
@@ -134,10 +136,12 @@ class GameActivity : AppCompatActivity() {
         return false
     }
 
+    // 📈 Re-balanced: Cap maximum concurrent nails at 5 instead of 8 to maintain screen clarity
     private fun getMaxNails(): Int {
         return when {
-            score > 100 -> 4
-            score > 50 -> 3
+            score > 150 -> 5
+            score > 90  -> 4
+            score > 40  -> 3
             else -> 2
         }
     }
@@ -145,116 +149,68 @@ class GameActivity : AppCompatActivity() {
     private fun countNails(): Int {
         var c = 0
         for (i in 0 until gameLayout.childCount) {
-            if (gameLayout.getChildAt(i) is ImageView) c++
+            if (gameLayout.getChildAt(i).tag == "nail") c++
         }
         return c
     }
+
     private fun startRandomBirds() {
-
         val bird = findViewById<LottieAnimationView>(R.id.birdView)
-
         fun launchBird() {
-
             val flyLeftToRight = Random.nextBoolean()
-
             val startY = Random.nextInt(80, 350).toFloat()
+            val startX = if (flyLeftToRight) -250f else screenWidth + 250f
+            val endX = if (flyLeftToRight) screenWidth + 250f else -250f
 
-            val startX: Float
-            val endX: Float
-
-            if (flyLeftToRight) {
-
-                startX = -250f
-                endX = screenWidth + 250f
-
-                bird.scaleX = 1f
-
-            } else {
-
-                startX = screenWidth + 250f
-                endX = -250f
-
-                // mirror bird
-                bird.scaleX = -1f
-            }
-
+            bird.scaleX = if (flyLeftToRight) 1f else -1f
             bird.apply {
-
                 visibility = View.VISIBLE
-
                 translationX = startX
                 translationY = startY
-
                 setAnimation("cute_bird.json")
-
                 repeatCount = LottieDrawable.INFINITE
-
                 speed = Random.nextFloat() * 0.4f + 0.8f
-
                 playAnimation()
             }
 
-            ObjectAnimator.ofFloat(
-                bird,
-                "translationX",
-                startX,
-                endX
-            ).apply {
-
+            ObjectAnimator.ofFloat(bird, "translationX", startX, endX).apply {
                 duration = Random.nextLong(5000, 9000)
-
                 start()
-
                 doOnEnd {
-
                     bird.cancelAnimation()
-
                     bird.visibility = View.GONE
-
-                    // random next appearance
-                    handler.postDelayed(
-                        { launchBird() },
-                        Random.nextLong(8000, 20000)
-                    )
+                    handler.postDelayed({ launchBird() }, Random.nextLong(8000, 20000))
                 }
             }
         }
-
-        // first appearance
-        handler.postDelayed(
-            { launchBird() },
-            5000
-        )
+        handler.postDelayed({ launchBird() }, 5000)
     }
+
     // ---------------- GAME START ----------------
 
     private fun startGame() {
         score = 0
         combo = 0
-        timeProgress = 100
+        timeProgressMs = MAX_TIME_MS
         consecutiveNails = 0
+        isDyingShakeActive = false
 
         updateScore()
-        updateTimeBar()
+        updateTimeBarDirect()
         startTimer()
 
         startBubbleSpawner()
         startNailSpawner()
     }
 
-    // ---------------- SPAWN SYSTEM ----------------
+    // ---------------- SPAWN ENGINE ----------------
 
     private fun startBubbleSpawner() {
         bubbleSpawner = object : Runnable {
             override fun run() {
-
                 spawnBubble()
-
-                val progress = (score / 150f).coerceIn(0f, 1f)
-                val eased = 1f - (1f - progress) * (1f - progress)
-
-                val interval = (900 - (900 - 350) * eased).toLong()
-
+                // Balanced: Slowed down generation speed curve (scales down to 450ms floor instead of 350ms)
+                val interval = (1100 - (score * 2.5)).toLong().coerceAtLeast(450L)
                 handler.postDelayed(this, interval)
             }
         }
@@ -264,31 +220,37 @@ class GameActivity : AppCompatActivity() {
     private fun startNailSpawner() {
         nailSpawner = object : Runnable {
             override fun run() {
-
                 if (!shouldForceBubble() && countNails() < getMaxNails()) {
                     spawnNail()
                     consecutiveNails++
                 }
-
-                val interval = (1200L - score * 2L).coerceAtLeast(600L)
-
+                // Balanced: Added more breathing room between obstacle spawns (700ms floor minimum)
+                val interval = (1600L - (score * 3L)).coerceAtLeast(700L)
                 handler.postDelayed(this, interval)
             }
         }
         handler.post(nailSpawner!!)
     }
-    private fun spawnBubble() {
 
-        val size = Random.nextInt(180, 280)
+    private fun spawnBubble() {
+        // Balanced: Gentle precision scaling. Bubbles shrink slower (Min: 100px instead of 75px)
+        val size = (240 - (score * 0.4f).toInt()).coerceAtLeast(100)
         val view = BubbleView(this)
 
         val params = FrameLayout.LayoutParams(size, size)
         params.leftMargin = Random.nextInt(0, (screenWidth - size).coerceAtLeast(1))
-        params.topMargin = Random.nextInt(200, (screenHeight - size - 100).coerceAtLeast(1))
+        params.topMargin = Random.nextInt(200, (screenHeight - size - 150).coerceAtLeast(1))
         view.layoutParams = params
 
-        view.setOnClickListener {
+        val despawnRunnable = Runnable {
+            if (view.parent != null) {
+                gameLayout.removeView(view)
+                combo = 0
+            }
+        }
 
+        view.setOnClickListener {
+            handler.removeCallbacks(despawnRunnable)
             combo++
             score += if (combo > 10) 2 else 1
             updateScore()
@@ -300,117 +262,119 @@ class GameActivity : AppCompatActivity() {
 
             showParticleBurst(view.x + size / 2, view.y + size / 2)
             playPopAnimation(view)
-            val refill = when {
-                score > 150 -> 6
-                score > 100 -> 8
-                score > 70 -> 10
-                score > 40 -> 12
-                else -> 15
-            }
-            val comboBonus = (combo / 10).coerceAtMost(5)
 
-            timeProgress = (timeProgress + refill + comboBonus).coerceAtMost(100)
-            animateTimeBar(timeProgress)
+            // Balanced: Standardized time returns to keep the game stable under high score runs
+            val refillMs = (8000.0 - (score * 15.0)).coerceAtLeast(4000.0)
+            val comboBonusMs = (combo * 150.0).coerceAtMost(3000.0)
+
+            positiveTimeAnimator?.cancel()
+
+            val oldTime = timeProgressMs
+            timeProgressMs = (timeProgressMs + refillMs + comboBonusMs).coerceAtMost(MAX_TIME_MS)
+
+            animatePositiveTimeGain(oldTime.toInt(), timeProgressMs.toInt())
 
             consecutiveNails = 0
         }
 
         gameLayout.addView(view)
 
-        handler.postDelayed({
-            if (view.parent != null) {
-                gameLayout.removeView(view)
-                combo = 0
-            }
-        }, (1800L - score * 5L).coerceAtLeast(900))
+        // Balanced: Gave the user more baseline time to hit individual bubbles (Min floor: 600ms)
+        val lifetime = (2200L - (score * 5L)).coerceAtLeast(600L)
+        handler.postDelayed(despawnRunnable, lifetime)
     }
 
     private fun spawnNail() {
-
-        // 🎯 Base size randomness
-        val baseSize = Random.nextInt(200, 320)
-
-        // 📈 Difficulty scaling (smaller nails at higher score)
-        val sizeReduction = score / 20
-        val size = (baseSize - sizeReduction).coerceAtLeast(140)
+        // 🛠️ Balanced Growing Nails:
+        // Changed growth modifier from 1.2f down to 0.6f.
+        // Max size capped at 320px instead of 450px so they don't completely block the layout.
+        val size = (160 + (score * 0.6f).toInt()).coerceAtMost(320)
 
         val view = ImageView(this).apply {
             setImageResource(R.drawable.nail)
-
-            // 🔥 Random rotation (adds visual variety)
+            tag = "nail"
             rotation = Random.nextFloat() * 360f
-
-            // 🎯 Spawn pop-in animation
             scaleX = 0f
             scaleY = 0f
-            animate().scaleX(1f).scaleY(1f).setDuration(150).start()
+            animate().scaleX(1f).scaleY(1f).setDuration(120).start()
         }
 
         val params = FrameLayout.LayoutParams(size, size)
         params.leftMargin = Random.nextInt(0, (screenWidth - size).coerceAtLeast(1))
-        params.topMargin = Random.nextInt(200, (screenHeight - size - 100).coerceAtLeast(1))
+        params.topMargin = Random.nextInt(200, (screenHeight - size - 150).coerceAtLeast(1))
         view.layoutParams = params
 
-        view.setOnClickListener {
+        val despawnRunnable = Runnable {
+            if (view.parent != null) {
+                view.animate()
+                    .alpha(0f)
+                    .setDuration(120)
+                    .withEndAction { gameLayout.removeView(view) }
+                    .start()
+            }
+        }
 
+        view.setOnClickListener {
+            handler.removeCallbacks(despawnRunnable)
             combo = 0
-            score = (score - 2).coerceAtLeast(0)
+            score = (score - 3).coerceAtLeast(0) // Reduced score penalty from -4 to -3
             updateScore()
 
-            soundPool.play(hitSoundId, 1f, 1f, 1, 0, 0.8f)
-
-            // 💥 stronger feedback for mistake
+            soundPool.play(hitSoundId, 1f, 1f, 1, 0, 0.65f)
             shakeScreen()
-
-            // 🔥 small burst for impact (reuse your particle system)
             showParticleBurst(view.x + size / 2, view.y + size / 2)
+
+            positiveTimeAnimator?.cancel()
+            // Reduced time penalty from 15% (15000ms) to 10% (10000ms) for fewer immediate deaths
+            timeProgressMs = (timeProgressMs - 10000.0).coerceAtLeast(0.0)
+
+            updateTimeBarDirect()
 
             if (view.parent != null) gameLayout.removeView(view)
         }
 
         gameLayout.addView(view)
 
-        // ⏱️ Despawn scales with difficulty
-        val despawn = (1800L - score * 5L).coerceAtLeast(900L)
-
-        handler.postDelayed({
-            if (view.parent != null) {
-                // 💡 Optional: fade out instead of instant remove
-                view.animate()
-                    .alpha(0f)
-                    .setDuration(150)
-                    .withEndAction { gameLayout.removeView(view) }
-            }
-        }, despawn)
+        // Balanced: Nails stick around slightly longer, making them strategic obstacles instead of fast traps
+        val lifetime = (2400L - (score * 4L)).coerceAtLeast(900L)
+        handler.postDelayed(despawnRunnable, lifetime)
     }
 
-    // ---------------- TIMER ----------------
+    // ---------------- MILLISECOND TIMER ENGINE ----------------
 
     private fun startTimer() {
         timerRunnable = object : Runnable {
             override fun run() {
+                val isAnimatingGain = positiveTimeAnimator?.isRunning == true
 
-                val drain = when {
-                    score > 150 -> 14
-                    score > 100 -> 12
-                    score > 70 -> 10
-                    score > 40 -> 8
-                    else -> 5
-                }
+                // 📈 Re-Balanced Time Decay Calculation:
+                // Base cost lowered from 4000ms to 3500ms per second.
+                // Multiplier cut in half from 75.0 down to 30.0 per point.
+                // This preserves uncapped difficulty but heavily softens the early/mid game transition.
+                val baseDrainPerSec = 3500.0
+                val addedDrainPerSec = score * 30.0
+                val totalDrainPerSec = baseDrainPerSec + addedDrainPerSec
 
-                timeProgress -= drain
+                val frameDrain = totalDrainPerSec * (TIMER_TICK_MS / 1000.0)
+                timeProgressMs -= frameDrain
 
-                if (timeProgress <= 0) gameOver()
-                else {
-                    animateTimeBar(timeProgress)
-                    timerHandler.postDelayed(this, 1000)
+                if (timeProgressMs <= 0.0) {
+                    timeProgressMs = 0.0
+                    positiveTimeAnimator?.cancel()
+                    updateTimeBarDirect()
+                    gameOver()
+                } else {
+                    if (!isAnimatingGain) {
+                        updateTimeBarDirect()
+                    }
+                    timerHandler.postDelayed(this, TIMER_TICK_MS)
                 }
             }
         }
-        timerHandler.postDelayed(timerRunnable, 1000)
+        timerHandler.postDelayed(timerRunnable, TIMER_TICK_MS)
     }
 
-    // ---------------- UI ----------------
+    // ---------------- UI INTERPOLATION ----------------
 
     private fun updateScore() {
         scoreText.text = "Score: $score"
@@ -419,7 +383,7 @@ class GameActivity : AppCompatActivity() {
 
     private fun setupComboTextView() {
         comboPraiseText = TextView(this).apply {
-            textSize = 40f
+            textSize = 36f
             setTypeface(null, Typeface.BOLD_ITALIC)
             gravity = Gravity.CENTER
             visibility = View.GONE
@@ -428,31 +392,15 @@ class GameActivity : AppCompatActivity() {
     }
 
     private fun showPraise() {
-
         comboPraiseText.text = "${praises.random()}\n$combo COMBO"
-
-        // 🎨 Bright random colors (vibrant palette)
         val colors = listOf(
-            Color.parseColor("#FFEB3B"), // Yellow
-            Color.parseColor("#00E5FF"), // Cyan neon
-            Color.parseColor("#FF4081"), // Pink
-            Color.parseColor("#76FF03"), // Lime
-            Color.parseColor("#FF9100"), // Orange
-            Color.parseColor("#E040FB"), // Purple
-            Color.parseColor("#00FFAA")  // Aqua green
+            Color.parseColor("#FFEB3B"), Color.parseColor("#00E5FF"),
+            Color.parseColor("#FF4081"), Color.parseColor("#76FF03"),
+            Color.parseColor("#FF9100"), Color.parseColor("#00FFAA")
         )
-
         val color = colors.random()
-
         comboPraiseText.setTextColor(color)
-
-        // ✨ subtle glow effect (shadow)
-        comboPraiseText.setShadowLayer(
-            20f,
-            0f,
-            0f,
-            color
-        )
+        comboPraiseText.setShadowLayer(15f, 0f, 0f, color)
 
         comboPraiseText.visibility = View.VISIBLE
         comboPraiseText.alpha = 0f
@@ -461,62 +409,82 @@ class GameActivity : AppCompatActivity() {
 
         comboPraiseText.animate()
             .alpha(1f)
-            .scaleX(1.3f)
-            .scaleY(1.3f)
-            .setDuration(250)
+            .scaleX(1.2f)
+            .scaleY(1.2f)
+            .setDuration(200)
             .withEndAction {
-
                 comboPraiseText.animate()
                     .alpha(0f)
-                    .scaleX(0.9f)
-                    .scaleY(0.9f)
-                    .setDuration(400)
-                    .withEndAction {
-                        comboPraiseText.visibility = View.GONE
-                    }
+                    .scaleX(0.8f)
+                    .scaleY(0.8f)
+                    .setDuration(300)
+                    .withEndAction { comboPraiseText.visibility = View.GONE }
             }
     }
 
-    // ---------------- TIME BAR ----------------
+    // ---------------- REALTIME TIME BAR TRACKING ----------------
 
-    private fun animateTimeBar(value: Int) {
-        ObjectAnimator.ofInt(timeBar, "progress", timeBar.progress, value).apply {
-            duration = 900 // match ~1 second cycle
-            interpolator = android.view.animation.LinearInterpolator()
+    private fun updateTimeBarDirect() {
+        val targetProgress = timeProgressMs.toInt()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            timeBar.setProgress(targetProgress, false)
+        } else {
+            timeBar.progress = targetProgress
+        }
+
+        updateTimeBarColor(timeProgressMs)
+    }
+
+    private fun animatePositiveTimeGain(startVal: Int, endVal: Int) {
+        positiveTimeAnimator = ValueAnimator.ofInt(startVal, endVal).apply {
+            duration = 120
+            interpolator = android.view.animation.DecelerateInterpolator()
+            addUpdateListener { animator ->
+                val animVal = animator.animatedValue as Int
+                if (animVal > timeProgressMs) {
+                    timeBar.progress = animVal
+                    updateTimeBarColor(animVal.toDouble())
+                }
+            }
             start()
         }
-        updateTimeBarColor(value)
     }
 
-    private fun updateTimeBar() {
-        timeBar.progress = timeProgress
-        updateTimeBarColor(timeProgress)
-    }
-
-    private fun updateTimeBarColor(value: Int) {
+    private fun updateTimeBarColor(valueMs: Double) {
+        val percentage = (valueMs / MAX_TIME_MS) * 100.0
         when {
-            value > 60 -> timeBar.progressTintList = ColorStateList.valueOf(Color.GREEN)
-            value > 30 -> timeBar.progressTintList = ColorStateList.valueOf(Color.YELLOW)
+            percentage > 55.0 -> {
+                timeBar.progressTintList = ColorStateList.valueOf(Color.GREEN)
+                isDyingShakeActive = false
+            }
+            percentage > 25.0 -> {
+                timeBar.progressTintList = ColorStateList.valueOf(Color.YELLOW)
+                isDyingShakeActive = false
+            }
             else -> {
                 timeBar.progressTintList = ColorStateList.valueOf(Color.RED)
-                if (value < 20) shakeScreen()
+                if (percentage < 12.0 && !isDyingShakeActive) {
+                    isDyingShakeActive = true
+                    shakeScreen()
+                }
             }
         }
     }
 
-    // ---------------- EFFECTS ----------------
+    // ---------------- VISUAL EFFECTS ----------------
 
     private fun playPopAnimation(view: View) {
-        val sx = ObjectAnimator.ofFloat(view, "scaleX", 1f, 1.25f)
-        val sy = ObjectAnimator.ofFloat(view, "scaleY", 1f, 1.25f)
-        val snapX = ObjectAnimator.ofFloat(view, "scaleX", 1.25f, 0f)
-        val snapY = ObjectAnimator.ofFloat(view, "scaleY", 1.25f, 0f)
+        val sx = ObjectAnimator.ofFloat(view, "scaleX", 1f, 1.2f)
+        val sy = ObjectAnimator.ofFloat(view, "scaleY", 1f, 1.2f)
+        val snapX = ObjectAnimator.ofFloat(view, "scaleX", 1.2f, 0f)
+        val snapY = ObjectAnimator.ofFloat(view, "scaleY", 1.2f, 0f)
         val fade = ObjectAnimator.ofFloat(view, "alpha", 1f, 0f)
 
         AnimatorSet().apply {
             playTogether(sx, sy)
-            play(snapX).with(snapY).with(fade).after(50)
-            duration = 150
+            play(snapX).with(snapY).with(fade).after(40)
+            duration = 120
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
                     if (view.parent != null) gameLayout.removeView(view)
@@ -527,10 +495,10 @@ class GameActivity : AppCompatActivity() {
     }
 
     private fun showParticleBurst(x: Float, y: Float) {
-        repeat(15) {
+        repeat(12) {
             val p = ImageView(this).apply {
                 setImageResource(R.drawable.particle)
-                val s = Random.nextInt(10, 25)
+                val s = Random.nextInt(12, 24)
                 layoutParams = FrameLayout.LayoutParams(s, s)
                 this.x = x
                 this.y = y
@@ -538,8 +506,7 @@ class GameActivity : AppCompatActivity() {
             gameLayout.addView(p)
 
             val angle = Math.toRadians(Random.nextInt(360).toDouble())
-            val dist = Random.nextInt(150, 450).toFloat()
-
+            val dist = Random.nextInt(100, 350).toFloat()
             val tx = x + (Math.cos(angle) * dist).toFloat()
             val ty = y + (Math.sin(angle) * dist).toFloat()
 
@@ -548,12 +515,10 @@ class GameActivity : AppCompatActivity() {
             val fade = ObjectAnimator.ofFloat(p, "alpha", 1f, 0f)
 
             AnimatorSet().apply {
-                duration = Random.nextLong(400, 700)
+                duration = Random.nextLong(350, 600)
                 playTogether(ax, ay, fade)
                 addListener(object : AnimatorListenerAdapter() {
-                    override fun onAnimationEnd(a: Animator) {
-                        gameLayout.removeView(p)
-                    }
+                    override fun onAnimationEnd(a: Animator) { gameLayout.removeView(p) }
                 })
                 start()
             }
@@ -561,11 +526,11 @@ class GameActivity : AppCompatActivity() {
     }
 
     private fun shakeScreen() {
-        ObjectAnimator.ofFloat(gameLayout, "translationX", 0f, 25f, -25f, 0f)
-            .setDuration(300).start()
+        ObjectAnimator.ofFloat(gameLayout, "translationX", 0f, 20f, -20f, 10f, -10f, 0f)
+            .setDuration(400).start()
     }
 
-    // ---------------- GAME OVER ----------------
+    // ---------------- TERMINATION ----------------
 
     private fun gameOver() {
         gameMusic.stop()
@@ -579,8 +544,7 @@ class GameActivity : AppCompatActivity() {
             .setView(input)
             .setCancelable(false)
             .setPositiveButton("Submit") { _, _ ->
-                HighScoreManager.saveScore(this,
-                    input.text.toString().ifEmpty { "Player" }, score)
+                HighScoreManager.saveScore(this, input.text.toString().ifEmpty { "Player" }, score)
                 startActivity(Intent(this, HighScoreActivity::class.java))
                 finish()
             }.show()
@@ -596,74 +560,61 @@ class GameActivity : AppCompatActivity() {
     }
 
     private fun setupSoundPool() {
-        val attr = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_GAME)
-            .build()
-
-        soundPool = SoundPool.Builder()
-            .setMaxStreams(10)
-            .setAudioAttributes(attr)
-            .build()
-
+        val attr = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME).build()
+        soundPool = SoundPool.Builder().setMaxStreams(6).setAudioAttributes(attr).build()
         popSoundId = soundPool.load(this, R.raw.bubble_pop, 1)
         hitSoundId = soundPool.load(this, R.raw.bubble_pop, 1)
     }
 
-
     private fun startFlowerParticles() {
         val layer = findViewById<FrameLayout>(R.id.particleLayer)
-
-        val handler = Handler(Looper.getMainLooper())
-
+        val particleHandler = Handler(Looper.getMainLooper())
         val spawn = object : Runnable {
             override fun run() {
                 spawnFlower(layer)
-                handler.postDelayed(this, Random.nextLong(1200, 3000))
+                particleHandler.postDelayed(this, Random.nextLong(1500, 3500))
             }
         }
-
-        handler.post(spawn)
+        particleHandler.post(spawn)
     }
 
     private fun spawnFlower(parent: FrameLayout) {
-
-        val size = Random.nextInt(6, 12)
-
+        val size = Random.nextInt(8, 16)
         val flower = View(this).apply {
             background = getDrawable(R.drawable.flower_dot)
-            alpha = Random.nextFloat() * 0.5f + 0.3f
+            alpha = Random.nextFloat() * 0.4f + 0.3f
             layoutParams = FrameLayout.LayoutParams(size, size)
         }
-
         parent.addView(flower)
 
         val startX = Random.nextInt(0, screenWidth)
         val startY = screenHeight + 50
-
         flower.x = startX.toFloat()
         flower.y = startY.toFloat()
 
-        val driftX = Random.nextInt(-100, 100).toFloat()
-        val driftY = -Random.nextInt(300, 600).toFloat()
+        val driftX = Random.nextInt(-80, 80).toFloat()
+        val driftY = -Random.nextInt(400, 700).toFloat()
 
         val moveX = ObjectAnimator.ofFloat(flower, "translationX", startX.toFloat(), startX + driftX)
         val moveY = ObjectAnimator.ofFloat(flower, "translationY", startY.toFloat(), startY + driftY)
         val fade = ObjectAnimator.ofFloat(flower, "alpha", flower.alpha, 0f)
 
         AnimatorSet().apply {
-            duration = Random.nextLong(4000, 7000)
+            duration = Random.nextLong(5000, 8000)
             playTogether(moveX, moveY, fade)
             interpolator = android.view.animation.LinearInterpolator()
             addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: Animator) {
-                    parent.removeView(flower)
-                }
+                override fun onAnimationEnd(animation: Animator) { parent.removeView(flower) }
             })
             start()
         }
     }
+
     override fun onDestroy() {
         super.onDestroy()
+        handler.removeCallbacksAndMessages(null)
+        timerHandler.removeCallbacksAndMessages(null)
+        positiveTimeAnimator?.cancel()
         gameMusic.release()
         soundPool.release()
     }

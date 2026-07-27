@@ -3,7 +3,6 @@ package com.app.taptap
 import android.content.Context
 import android.graphics.*
 import android.view.View
-import kotlin.random.Random
 
 class BubbleView(context: Context) : View(context) {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -13,10 +12,6 @@ class BubbleView(context: Context) : View(context) {
     private var radius = 0f
     private var centerX = 0f
     private var centerY = 0f
-
-    // Animation offsets for "liquid" feel
-    private var wobbleOffset = 0f
-    private var rainbowPhase = 0f
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
@@ -28,15 +23,18 @@ class BubbleView(context: Context) : View(context) {
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        // 1. Edge Definition (Visibility Fix)
-        // We use a thick stroke with a slight blue/purple tint to ensure it pops against white
+        // 1. Save Layout Layer for Blending
+        // We isolate this rendering cycle so our rainbow spectrum clips perfectly inside the bubble skin
+        val saveCount = canvas.saveLayer(0f, 0f, width.toFloat(), height.toFloat(), null)
+
+        // 2. Original Edge Definition
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = 4f
-        paint.color = Color.parseColor("#88AADDFF") // Semi-transparent light blue
+        paint.color = Color.parseColor("#88AADDFF")
         canvas.drawCircle(centerX, centerY, radius, paint)
 
-        // 2. The "Soap Film" (Thin-film Interference)
-        // A radial gradient that is darker at the edges and transparent in the middle
+        // 3. Original "Soap Film" Base
+        // Keeps your beautiful transparent center core and original dimensional tracking
         val soapGradient = RadialGradient(
             centerX, centerY, radius,
             intArrayOf(Color.TRANSPARENT, Color.parseColor("#2200E1FF"), Color.parseColor("#6655CCFF")),
@@ -48,10 +46,44 @@ class BubbleView(context: Context) : View(context) {
         canvas.drawCircle(centerX, centerY, radius, paint)
         paint.shader = null
 
-        // 3. Realistic Highlights (The "Sheen")
+        // 4. 🌈 THE CHROMATIC RAINBOW SPECTRUM OVERLAY
+        // We project a subtle linear light spectrum diagonally across the bubble.
+        // Using SRC_ATOP ensures it only applies to the existing transparent colors drawn in step 3.
+        val rainbowColors = intArrayOf(
+            Color.parseColor("#33FF0000"), // Soft Red (20% Opacity)
+            Color.parseColor("#22FFBB00"), // Soft Yellow (13% Opacity)
+            Color.parseColor("#2200FF66"), // Soft Green (13% Opacity)
+            Color.parseColor("#3300E1FF"), // Soft Cyan (20% Opacity)
+            Color.parseColor("#330044FF"), // Soft Blue (20% Opacity)
+            Color.parseColor("#44FF00CC")  // Soft Magenta (26% Opacity)
+        )
+
+        // Diagonal coordinates from top-left to bottom-right mirror realistic refraction entry angles
+        val spectrumShader = LinearGradient(
+            centerX - radius, centerY - radius,
+            centerX + radius, centerY + radius,
+            rainbowColors,
+            floatArrayOf(0.0f, 0.2f, 0.4f, 0.6f, 0.8f, 1.0f),
+            Shader.TileMode.CLAMP
+        )
+
+        paint.shader = spectrumShader
+        paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP) // 🔑 Clips the rainbow inside the soap film!
+        canvas.drawCircle(centerX, centerY, radius, paint)
+
+        // Clean up the paint pipeline configurations
+        paint.shader = null
+        paint.xfermode = null
+
+        // Restore our layers to cleanly merge the background matrix back together
+        canvas.restoreToCount(saveCount)
+
+        // 5. Original Realistic Highlights (The "Sheen")
+        // Rendered after the rainbow layer to ensure white reflections sit cleanly on top
         highlightPaint.color = Color.WHITE
-        highlightPaint.alpha = 180
+
         // Top-left main reflection
+        highlightPaint.alpha = 180
         canvas.drawOval(
             centerX - radius * 0.6f, centerY - radius * 0.7f,
             centerX - radius * 0.2f, centerY - radius * 0.4f,
