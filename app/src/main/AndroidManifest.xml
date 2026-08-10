@@ -14,17 +14,20 @@
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="@string/admob_app_id"/>
 
-        <activity android:name="com.app.taptap.HelpActivity" />
-        <activity android:name="com.app.taptap.HighScoreActivity" />
+        <activity android:name="com.app.taptap.HelpActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
+        <activity android:name="com.app.taptap.HighScoreActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
 
         <activity
             android:name="com.app.bubblepop.GameActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
 
         <activity
             android:name="com.app.taptap.MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

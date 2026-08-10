@@ -19,7 +19,11 @@ import android.view.Gravity
 import android.view.View
 import android.widget.*
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 import kotlin.math.max
 import kotlin.random.Random
 import android.animation.ObjectAnimator
@@ -82,8 +86,21 @@ class GameActivity : AppCompatActivity() {
     private var positiveTimeAnimator: ValueAnimator? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_game)
+
+        gameLayout = findViewById(R.id.gameLayout)
+        ViewCompat.setOnApplyWindowInsetsListener(gameLayout) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.updatePadding(
+                left = systemBars.left,
+                top = systemBars.top,
+                right = systemBars.right,
+                bottom = systemBars.bottom
+            )
+            insets
+        }
 
         MobileAds.initialize(this) {}
         loadInterstitialAd()
@@ -109,7 +126,6 @@ class GameActivity : AppCompatActivity() {
         screenWidth = metrics.widthPixels
         screenHeight = metrics.heightPixels
 
-        gameLayout = findViewById(R.id.gameLayout)
         scoreText = findViewById(R.id.scoreText)
         
         modeIndicatorText = TextView(this).apply {
