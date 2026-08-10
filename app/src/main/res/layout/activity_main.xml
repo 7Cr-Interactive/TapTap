@@ -43,7 +43,7 @@
             android:id="@+id/zipModeButton"
             android:layout_width="240dp"
             android:layout_height="64dp"
-            android:text="3 MIN ZIP"
+            android:text="1 MIN ZIP"
             android:textColor="#FFFFFF"
             android:background="@drawable/glass_button_bg"
             android:elevation="4dp"

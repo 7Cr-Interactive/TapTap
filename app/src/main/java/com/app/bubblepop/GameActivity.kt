@@ -2,6 +2,7 @@ package com.app.bubblepop
 
 import android.animation.*
 import android.app.AlertDialog
+import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
@@ -23,6 +24,14 @@ import kotlin.math.max
 import kotlin.random.Random
 import android.animation.ObjectAnimator
 import androidx.core.animation.doOnEnd
+
+// Ads imports
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.LoadAdError
+import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.interstitial.InterstitialAd
+import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
+import com.google.android.gms.ads.FullScreenContentCallback
 
 // Explicitly import components from the taptap package
 import com.app.taptap.R
@@ -47,6 +56,8 @@ class GameActivity : AppCompatActivity() {
     private var score = 0
     private var combo = 0
     private var gameMode = "NORMAL"
+
+    private var mInterstitialAd: InterstitialAd? = null
 
     // ⏱️ Millisecond Core Engine Constants
     private var MAX_TIME_MS = 100000.0
@@ -74,10 +85,13 @@ class GameActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_game)
 
+        MobileAds.initialize(this) {}
+        loadInterstitialAd()
+
         gameMode = intent.getStringExtra("GAME_MODE") ?: "NORMAL"
         
         if (gameMode == "ZIP") {
-            MAX_TIME_MS = 180000.0 // 3 minutes
+            MAX_TIME_MS = 60000.0 // 1 minute
         } else {
             MAX_TIME_MS = 100000.0
         }
@@ -99,7 +113,7 @@ class GameActivity : AppCompatActivity() {
         scoreText = findViewById(R.id.scoreText)
         
         modeIndicatorText = TextView(this).apply {
-            text = if (gameMode == "ZIP") "3 MIN ZIP" else "NORMAL"
+            text = if (gameMode == "ZIP") "1 MIN ZIP" else "NORMAL"
             textSize = 14f
             setTextColor(Color.WHITE)
             alpha = 0.5f
@@ -129,6 +143,20 @@ class GameActivity : AppCompatActivity() {
         animateSun()
         startFlowerParticles()
         startGame()
+    }
+
+    private fun loadInterstitialAd() {
+        val adRequest = AdRequest.Builder().build()
+        // Using Ad Unit ID from resources
+        InterstitialAd.load(this, getString(R.string.admob_interstitial_ad_id), adRequest,
+            object : InterstitialAdLoadCallback() {
+                override fun onAdLoaded(interstitialAd: InterstitialAd) {
+                    mInterstitialAd = interstitialAd
+                }
+                override fun onAdFailedToLoad(adError: LoadAdError) {
+                    mInterstitialAd = null
+                }
+            })
     }
 
     private fun animateSun() {
@@ -239,7 +267,7 @@ class GameActivity : AppCompatActivity() {
             override fun run() {
                 spawnBubble()
                 val interval = if (gameMode == "ZIP") {
-                    400L
+                    250L
                 } else {
                     (1100 - (score * 2.5)).toLong().coerceAtLeast(450L)
                 }
@@ -257,7 +285,7 @@ class GameActivity : AppCompatActivity() {
                     consecutiveNails++
                 }
                 val interval = if (gameMode == "ZIP") {
-                    650L
+                    500L
                 } else {
                     (1600L - (score * 3L)).coerceAtLeast(700L)
                 }
@@ -268,8 +296,6 @@ class GameActivity : AppCompatActivity() {
     }
 
     private fun spawnBubble() {
-        // ZIP Mode bubbles: random large size (350-550) and no shrinking.
-        // NORMAL mode: standard shrinking mechanic (down to 100).
         val size = if (gameMode == "ZIP") {
             Random.nextInt(350, 551)
         } else {
@@ -280,7 +306,6 @@ class GameActivity : AppCompatActivity() {
 
         val params = FrameLayout.LayoutParams(size, size)
         params.leftMargin = Random.nextInt(0, (screenWidth - size).coerceAtLeast(1))
-        // Position buffer to keep bubbles within viewable area
         val topFloor = 200
         val topCeiling = (screenHeight - size - 150).coerceAtLeast(topFloor + 1)
         params.topMargin = Random.nextInt(topFloor, topCeiling)
@@ -323,7 +348,7 @@ class GameActivity : AppCompatActivity() {
         gameLayout.addView(view)
 
         val lifetime = if (gameMode == "ZIP") {
-            600L
+            500L
         } else {
             (2200L - (score * 5L)).coerceAtLeast(600L)
         }
@@ -385,7 +410,7 @@ class GameActivity : AppCompatActivity() {
         gameLayout.addView(view)
 
         val lifetime = if (gameMode == "ZIP") {
-            800L
+            700L
         } else {
             (2400L - (score * 4L)).coerceAtLeast(900L)
         }
@@ -577,6 +602,26 @@ class GameActivity : AppCompatActivity() {
         handler.removeCallbacksAndMessages(null)
         timerHandler.removeCallbacksAndMessages(null)
 
+        val prefs = getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
+        val gameCount = prefs.getInt("game_count", 0) + 1
+        prefs.edit().putInt("game_count", gameCount).apply()
+
+        if (gameCount % 5 == 0 && mInterstitialAd != null) {
+            mInterstitialAd?.fullScreenContentCallback = object : FullScreenContentCallback() {
+                override fun onAdDismissedFullScreenContent() {
+                    showGameOverDialog()
+                }
+                override fun onAdFailedToShowFullScreenContent(adError: com.google.android.gms.ads.AdError) {
+                    showGameOverDialog()
+                }
+            }
+            mInterstitialAd?.show(this)
+        } else {
+            showGameOverDialog()
+        }
+    }
+
+    private fun showGameOverDialog() {
         val input = EditText(this).apply { hint = "Name"; gravity = Gravity.CENTER }
 
         AlertDialog.Builder(this)

@@ -47,6 +47,7 @@ dependencies {
     implementation(libs.androidx.core.animation)
     testImplementation(libs.junit)
     implementation("com.airbnb.android:lottie:6.4.0")
+    implementation("com.google.android.gms:play-services-ads:23.6.0")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

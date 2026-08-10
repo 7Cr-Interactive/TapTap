@@ -10,6 +10,10 @@
         android:hardwareAccelerated="true"
         android:theme="@style/Theme.AppCompat.Light.NoActionBar">
 
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="@string/admob_app_id"/>
+
         <activity android:name="com.app.taptap.HelpActivity" />
         <activity android:name="com.app.taptap.HighScoreActivity" />
 
