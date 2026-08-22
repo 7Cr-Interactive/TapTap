@@ -16,8 +16,21 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 
+import com.app.taptap.data.TapTapDao
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+@AndroidEntryPoint
 class HighScoreActivity : AppCompatActivity() {
 
+    @Inject lateinit var dao: TapTapDao
+    private val scope = CoroutineScope(Dispatchers.Main + Job())
+    
     private var currentMode = "NORMAL"
     private lateinit var soundPool: SoundPool
     private var bubbleSoundId = 0
@@ -72,8 +85,10 @@ class HighScoreActivity : AppCompatActivity() {
                 .setMessage("Are you sure you want to delete all high scores for $currentMode mode?")
                 .setPositiveButton("Yes") { _, _ ->
                     playClickSound()
-                    HighScoreManager.clearScores(this, currentMode)
-                    loadScores(currentMode)
+                    scope.launch {
+                        dao.clearScores(currentMode)
+                        loadScores(currentMode)
+                    }
                 }
                 .setNegativeButton("Cancel") { _, _ ->
                     playClickSound()
@@ -98,32 +113,34 @@ class HighScoreActivity : AppCompatActivity() {
         val scoreListLayout = findViewById<LinearLayout>(R.id.scoreList)
         scoreListLayout.removeAllViews()
 
-        val scores = HighScoreManager.getScores(this, mode).take(10)
-
-        if (scores.isEmpty()) {
-            val textView = TextView(this).apply {
-                text = "No scores yet!"
-                textSize = 18f
-                setTextColor(Color.WHITE)
-                gravity = Gravity.CENTER
-                setPadding(0, 50, 0, 0)
-            }
-            scoreListLayout.addView(textView)
-        } else {
-            scores.forEachIndexed { index, pair ->
-                val (name, score) = pair
-                val textView = TextView(this).apply {
-                    text = "${index + 1}. $name - $score"
-                    textSize = 22f
-                    setTextColor(Color.WHITE)
-                    gravity = Gravity.CENTER
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    )
-                    setPadding(8, 24, 8, 24)
+        scope.launch {
+            dao.getTopScores(mode).collect { scores ->
+                scoreListLayout.removeAllViews()
+                if (scores.isEmpty()) {
+                    val textView = TextView(this@HighScoreActivity).apply {
+                        text = "No scores yet!"
+                        textSize = 18f
+                        setTextColor(Color.WHITE)
+                        gravity = Gravity.CENTER
+                        setPadding(0, 50, 0, 0)
+                    }
+                    scoreListLayout.addView(textView)
+                } else {
+                    scores.forEachIndexed { index, scoreEntity ->
+                        val textView = TextView(this@HighScoreActivity).apply {
+                            text = "${index + 1}. ${scoreEntity.name} - ${scoreEntity.score}"
+                            textSize = 22f
+                            setTextColor(Color.WHITE)
+                            gravity = Gravity.CENTER
+                            layoutParams = LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.MATCH_PARENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT
+                            )
+                            setPadding(8, 24, 8, 24)
+                        }
+                        scoreListLayout.addView(textView)
+                    }
                 }
-                scoreListLayout.addView(textView)
             }
         }
     }

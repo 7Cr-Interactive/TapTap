@@ -1,7 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.app.taptap">
 
+    <uses-permission android:name="android.permission.VIBRATE" />
+
     <application
+        android:name=".TapTapApplication"
         android:allowBackup="true"
         android:label="TapTap"
         android:icon="@drawable/game_logo"

@@ -11,6 +11,13 @@ class BubbleView(context: Context) : View(context) {
 
     var type: BubbleType = BubbleType.NORMAL
 
+    private var shrinkFactor = 1f
+    
+    fun setShrink(factor: Float) {
+        shrinkFactor = factor.coerceIn(0.1f, 1f)
+        invalidate()
+    }
+
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val highlightPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
@@ -21,13 +28,18 @@ class BubbleView(context: Context) : View(context) {
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        radius = (minOf(w, h) / 2f) * 0.85f
+        updateDimensions(w, h)
+    }
+
+    private fun updateDimensions(w: Int, h: Int) {
+        radius = (minOf(w, h) / 2f) * 0.85f * shrinkFactor
         centerX = w / 2f
         centerY = h / 2f
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        updateDimensions(width, height)
 
         // 1. Save Layout Layer for Blending
         // We isolate this rendering cycle so our rainbow spectrum clips perfectly inside the bubble skin

@@ -43,7 +43,19 @@ import com.app.taptap.BubbleView
 import com.app.taptap.HighScoreManager
 import com.app.taptap.HighScoreActivity
 
+import androidx.activity.viewModels
+import androidx.lifecycle.lifecycleScope
+import com.app.taptap.ui.GameViewModel
+import com.app.taptap.util.HapticManager
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+@AndroidEntryPoint
 class GameActivity : AppCompatActivity() {
+
+    @Inject lateinit var hapticManager: HapticManager
+    private val viewModel: GameViewModel by viewModels()
 
     private lateinit var gameLayout: FrameLayout
     private lateinit var scoreText: TextView
@@ -58,18 +70,7 @@ class GameActivity : AppCompatActivity() {
     private var popSoundId = 0
     private var hitSoundId = 0
 
-    private var score = 0
-    private var combo = 0
-    private var gameMode = "NORMAL"
-
-    private var isShieldActive = false
-    private var freezeDurationLeftMs = 0L
-
     private var mInterstitialAd: InterstitialAd? = null
-
-    // ⏱️ Millisecond Core Engine Constants
-    private var MAX_TIME_MS = 100000.0
-    private var timeProgressMs = MAX_TIME_MS
 
     private val handler = Handler(Looper.getMainLooper())
     private val timerHandler = Handler(Looper.getMainLooper())
@@ -86,8 +87,6 @@ class GameActivity : AppCompatActivity() {
     private var consecutiveNails = 0
     private var isDyingShakeActive = false
     private val praises = listOf("NICE!", "AWESOME!", "SUPER!", "FANTASTIC!", "PERFECT!")
-
-    private var positiveTimeAnimator: ValueAnimator? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -109,13 +108,8 @@ class GameActivity : AppCompatActivity() {
         MobileAds.initialize(this) {}
         loadInterstitialAd()
 
-        gameMode = intent.getStringExtra("GAME_MODE") ?: "NORMAL"
-        
-        if (gameMode == "ZIP") {
-            MAX_TIME_MS = 60000.0 // 1 minute
-        } else {
-            MAX_TIME_MS = 100000.0
-        }
+        val gameMode = intent.getStringExtra("GAME_MODE") ?: "NORMAL"
+        viewModel.initGame(gameMode)
 
         val bgAnim = findViewById<LottieAnimationView>(R.id.bgAnimation)
         bgAnim.scaleX = 1f
@@ -146,12 +140,13 @@ class GameActivity : AppCompatActivity() {
         gameLayout.addView(modeIndicatorText)
 
         timeBar = findViewById(R.id.timeBar)
-        timeBar.max = MAX_TIME_MS.toInt()
+        timeBar.max = viewModel.maxTimeMs.toInt()
 
         powerUpStatusText = findViewById(R.id.powerUpStatus)
 
         setupComboTextView()
         setupSoundPool()
+        setupObservers()
 
         gameMusic = MediaPlayer.create(this, R.raw.game_music).apply {
             isLooping = true
@@ -216,6 +211,8 @@ class GameActivity : AppCompatActivity() {
     }
 
     private fun getMaxNails(): Int {
+        val score = viewModel.score.value
+        val gameMode = viewModel.gameMode
         if (gameMode == "ZIP") return 5
         return when {
             score > 150 -> 5
@@ -265,19 +262,62 @@ class GameActivity : AppCompatActivity() {
         handler.postDelayed({ launchBird() }, 5000)
     }
 
+    private fun setupObservers() {
+        lifecycleScope.launch {
+            viewModel.score.collect { score ->
+                scoreText.text = "Score: $score"
+                scoreText.setTextColor(if (viewModel.combo.value >= 10) Color.YELLOW else Color.WHITE)
+            }
+        }
+
+        lifecycleScope.launch {
+            viewModel.combo.collect { combo ->
+                if (combo % 5 == 0 && combo > 0) showPraise()
+            }
+        }
+
+        lifecycleScope.launch {
+            viewModel.timeRemainingMs.collect { timeMs ->
+                updateTimeBarDirect(timeMs)
+            }
+        }
+
+        lifecycleScope.launch {
+            viewModel.isGameOver.collect { isOver ->
+                if (isOver) gameOver()
+            }
+        }
+
+        lifecycleScope.launch {
+            viewModel.isShieldActive.collect { active ->
+                if (active) showPowerUpStatus("SHIELD ACTIVE!", Color.YELLOW)
+            }
+        }
+        
+        lifecycleScope.launch {
+            viewModel.freezeDurationLeftMs.collect { duration ->
+                if (duration > 0) showPowerUpStatus("FREEZE ACTIVE!", Color.CYAN)
+                else if (duration == 0L && powerUpStatusText.text == "FREEZE ACTIVE!") {
+                    powerUpStatusText.visibility = View.GONE
+                }
+            }
+        }
+    }
+
+    private fun updateTimeBarDirect(timeMs: Double) {
+        val targetProgress = timeMs.toInt()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            timeBar.setProgress(targetProgress, false)
+        } else {
+            timeBar.progress = targetProgress
+        }
+        updateTimeBarColor(timeMs)
+    }
+
     // ---------------- GAME START ----------------
 
     private fun startGame() {
-        score = 0
-        combo = 0
-        timeProgressMs = MAX_TIME_MS
-        consecutiveNails = 0
-        isDyingShakeActive = false
-
-        updateScore()
-        updateTimeBarDirect()
         startTimer()
-
         startBubbleSpawner()
         startNailSpawner()
     }
@@ -293,10 +333,10 @@ class GameActivity : AppCompatActivity() {
                     spawnBubble()
                 }
                 
-                val interval = if (gameMode == "ZIP") {
+                val interval = if (viewModel.gameMode == "ZIP") {
                     200L
                 } else {
-                    (800 - (score * 2.0)).toLong().coerceAtLeast(300L)
+                    (800 - (viewModel.score.value * 2.0)).toLong().coerceAtLeast(300L)
                 }
                 handler.postDelayed(this, interval)
             }
@@ -320,10 +360,10 @@ class GameActivity : AppCompatActivity() {
                     spawnNail()
                     consecutiveNails++
                 }
-                val interval = if (gameMode == "ZIP") {
-                    500L
+                val interval = if (viewModel.gameMode == "ZIP") {
+                    400L // Faster from 500L
                 } else {
-                    (1600L - (score * 3L)).coerceAtLeast(700L)
+                    (1600L - (viewModel.score.value * 5L)).coerceAtLeast(500L) // Faster reduction and floor
                 }
                 handler.postDelayed(this, interval)
             }
@@ -332,14 +372,14 @@ class GameActivity : AppCompatActivity() {
     }
 
     private fun spawnBubble() {
-        val size = if (gameMode == "ZIP") {
+        val size = if (viewModel.gameMode == "ZIP") {
             Random.nextInt(350, 551)
         } else {
-            // Increased base size by 50% (240 -> 360) and minimum size (100 -> 150)
-            (360 - (score * 0.4f).toInt()).coerceAtLeast(150)
+            (360 - (viewModel.score.value * 0.4f).toInt()).coerceAtLeast(150)
         }
         
         val view = BubbleView(this)
+        view.setShrink(viewModel.getShrinkFactor())
 
         // Power-up Selection (15% total chance)
         val roll = Random.nextInt(100)
@@ -361,74 +401,47 @@ class GameActivity : AppCompatActivity() {
         val despawnRunnable = Runnable {
             if (view.parent != null) {
                 gameLayout.removeView(view)
-                combo = 0
+                // We don't reset combo here as it's now handled by the VM or just left to break naturally
             }
         }
 
         view.setOnClickListener {
+            view.setOnClickListener(null)
+            hapticManager.vibratePop()
             handler.removeCallbacks(despawnRunnable)
             
             when(view.type) {
-                BubbleView.BubbleType.FREEZE -> {
-                    freezeDurationLeftMs = 5000L
-                    showPowerUpStatus("FREEZE ACTIVE!", Color.CYAN)
-                }
-                BubbleView.BubbleType.SHIELD -> {
-                    isShieldActive = true
-                    showPowerUpStatus("SHIELD ACTIVE!", Color.YELLOW)
-                }
-                BubbleView.BubbleType.BLAST -> {
-                    popAllBubbles()
-                }
-                BubbleView.BubbleType.RAINBOW -> {
-                    score += 5
-                    combo += 20
-                    showPraise()
-                }
-                else -> {
-                    combo++
-                    score += if (combo > 10) 2 else 1
-                }
+                BubbleView.BubbleType.FREEZE -> viewModel.activateFreeze()
+                BubbleView.BubbleType.SHIELD -> viewModel.activateShield()
+                BubbleView.BubbleType.BLAST -> popAllBubbles()
+                BubbleView.BubbleType.RAINBOW -> viewModel.incrementScore("RAINBOW")
+                else -> viewModel.incrementScore("NORMAL")
             }
             
-            updateScore()
-
-            if (combo % 5 == 0 && view.type == BubbleView.BubbleType.NORMAL) showPraise()
-
-            val pitch = (1f + combo * 0.02f).coerceAtMost(1.5f)
+            val pitch = (1f + viewModel.combo.value * 0.02f).coerceAtMost(1.5f)
             soundPool.play(popSoundId, 1f, 1f, 1, 0, pitch)
 
             showParticleBurst(view.x + size / 2, view.y + size / 2)
             playPopAnimation(view)
-
-            if (gameMode == "NORMAL") {
-                val refillMs = (8000.0 - (score * 15.0)).coerceAtLeast(4000.0)
-                val comboBonusMs = (combo * 150.0).coerceAtMost(3000.0)
-
-                positiveTimeAnimator?.cancel()
-                val oldTime = timeProgressMs
-                timeProgressMs = (timeProgressMs + refillMs + comboBonusMs).coerceAtMost(MAX_TIME_MS)
-                animatePositiveTimeGain(oldTime.toInt(), timeProgressMs.toInt())
-            }
-
+            viewModel.addTimeBonus()
             consecutiveNails = 0
         }
 
         gameLayout.addView(view)
-
-        val lifetime = if (gameMode == "ZIP") {
+        
+        val lifetime = if (viewModel.gameMode == "ZIP") {
             800L
         } else {
-            (3500L - (score * 5L)).coerceAtLeast(1500L)
+            (3500L - (viewModel.score.value * 5L)).coerceAtLeast(1500L)
         }
         handler.postDelayed(despawnRunnable, lifetime)
     }
 
     private fun spawnNail() {
-        val size = if (gameMode == "ZIP") {
+        val size = if (viewModel.gameMode == "ZIP") {
             280
         } else {
-            (160 + (score * 0.6f).toInt()).coerceAtMost(320)
+            (160 + (viewModel.score.value * 0.6f).toInt()).coerceAtMost(320)
         }
 
         val view = ImageView(this).apply {
@@ -458,38 +471,30 @@ class GameActivity : AppCompatActivity() {
         }
 
         view.setOnClickListener {
+            hapticManager.vibrateHit()
             handler.removeCallbacks(despawnRunnable)
             
-            if (isShieldActive) {
-                isShieldActive = false
+            if (viewModel.isShieldActive.value) {
+                viewModel.hitNail()
                 showPowerUpStatus("SHIELD BROKEN!", Color.WHITE)
                 if (view.parent != null) gameLayout.removeView(view)
                 return@setOnClickListener
             }
             
-            combo = 0
-            score = (score - 3).coerceAtLeast(0)
-            updateScore()
-
+            viewModel.hitNail()
             soundPool.play(hitSoundId, 1f, 1f, 1, 0, 0.65f)
             shakeScreen()
             showParticleBurst(view.x + size / 2, view.y + size / 2)
-
-            if (gameMode == "NORMAL") {
-                positiveTimeAnimator?.cancel()
-                timeProgressMs = (timeProgressMs - 10000.0).coerceAtLeast(0.0)
-                updateTimeBarDirect()
-            }
 
             if (view.parent != null) gameLayout.removeView(view)
         }
 
         gameLayout.addView(view)
 
-        val lifetime = if (gameMode == "ZIP") {
+        val lifetime = if (viewModel.gameMode == "ZIP") {
             700L
         } else {
-            (2400L - (score * 4L)).coerceAtLeast(900L)
+            (2400L - (viewModel.score.value * 4L)).coerceAtLeast(900L)
         }
         handler.postDelayed(despawnRunnable, lifetime)
     }
@@ -497,45 +502,11 @@ class GameActivity : AppCompatActivity() {
     private fun startTimer() {
         timerRunnable = object : Runnable {
             override fun run() {
-                val isAnimatingGain = positiveTimeAnimator?.isRunning == true
-
-                if (freezeDurationLeftMs > 0) {
-                    freezeDurationLeftMs -= TIMER_TICK_MS
-                    if (freezeDurationLeftMs <= 0) {
-                        powerUpStatusText.visibility = View.GONE
-                    }
-                    timerHandler.postDelayed(this, TIMER_TICK_MS)
-                    return
-                }
-
-                val drainPerSec = if (gameMode == "ZIP") {
-                    1000.0
-                } else {
-                    3500.0 + (score * 30.0)
-                }
-
-                val frameDrain = drainPerSec * (TIMER_TICK_MS / 1000.0)
-                timeProgressMs -= frameDrain
-
-                if (timeProgressMs <= 0.0) {
-                    timeProgressMs = 0.0
-                    positiveTimeAnimator?.cancel()
-                    updateTimeBarDirect()
-                    gameOver()
-                } else {
-                    if (!isAnimatingGain) {
-                        updateTimeBarDirect()
-                    }
-                    timerHandler.postDelayed(this, TIMER_TICK_MS)
-                }
+                viewModel.updateTime(TIMER_TICK_MS)
+                timerHandler.postDelayed(this, TIMER_TICK_MS)
             }
         }
         timerHandler.postDelayed(timerRunnable, TIMER_TICK_MS)
-    }
-
-    private fun updateScore() {
-        scoreText.text = "Score: $score"
-        scoreText.setTextColor(if (combo >= 10) Color.YELLOW else Color.WHITE)
     }
 
     private fun setupComboTextView() {
@@ -549,6 +520,7 @@ class GameActivity : AppCompatActivity() {
     }
 
     private fun showPraise() {
+        val combo = viewModel.combo.value
         comboPraiseText.text = "${praises.random()}\n$combo COMBO"
         val colors = listOf(
             Color.parseColor("#FFEB3B"), Color.parseColor("#00E5FF"),
@@ -579,35 +551,8 @@ class GameActivity : AppCompatActivity() {
             }
     }
 
-    private fun updateTimeBarDirect() {
-        val targetProgress = timeProgressMs.toInt()
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            timeBar.setProgress(targetProgress, false)
-        } else {
-            timeBar.progress = targetProgress
-        }
-
-        updateTimeBarColor(timeProgressMs)
-    }
-
-    private fun animatePositiveTimeGain(startVal: Int, endVal: Int) {
-        positiveTimeAnimator = ValueAnimator.ofInt(startVal, endVal).apply {
-            duration = 120
-            interpolator = android.view.animation.DecelerateInterpolator()
-            addUpdateListener { animator ->
-                val animVal = animator.animatedValue as Int
-                if (animVal > timeProgressMs) {
-                    timeBar.progress = animVal
-                    updateTimeBarColor(animVal.toDouble())
-                }
-            }
-            start()
-        }
-    }
-
     private fun updateTimeBarColor(valueMs: Double) {
-        val percentage = (valueMs / MAX_TIME_MS) * 100.0
+        val percentage = (valueMs / viewModel.maxTimeMs) * 100.0
         when {
             percentage > 55.0 -> {
                 timeBar.progressTintList = ColorStateList.valueOf(Color.GREEN)
@@ -716,7 +661,6 @@ class GameActivity : AppCompatActivity() {
             val child = gameLayout.getChildAt(i)
             if (child is BubbleView && child.tag != "particle") {
                 bubblesToPop.add(child)
-                // If this is the blast bubble that was just clicked, use its position as center
                 if (child.type == BubbleView.BubbleType.BLAST) {
                     blastCenter = Pair(child.x + child.width / 2, child.y + child.height / 2)
                 }
@@ -726,12 +670,10 @@ class GameActivity : AppCompatActivity() {
         showBubbleClusterBurst(blastCenter.first, blastCenter.second)
         
         bubblesToPop.forEach { bubble ->
-            score += 1
+            viewModel.incrementScore("BLAST_COLLATERAL")
             playPopAnimation(bubble)
-            // Smaller bursts for the collateral bubbles
             showParticleBurst(bubble.x + bubble.width/2, bubble.y + bubble.height/2)
         }
-        updateScore()
         showPowerUpStatus("BLAST!", Color.RED)
     }
 
@@ -774,8 +716,8 @@ class GameActivity : AppCompatActivity() {
         powerUpStatusText.setTextColor(color)
         powerUpStatusText.visibility = View.VISIBLE
         
-        // Auto-hide after some time if not freeze (freeze hides via timer)
-        if (!text.contains("FREEZE")) {
+        // Auto-hide after some time if not freeze (freeze hides via observer)
+        if (!text.contains("FREEZE") && !text.contains("SHIELD ACTIVE")) {
             handler.postDelayed({
                 if (powerUpStatusText.text == text) {
                     powerUpStatusText.visibility = View.GONE
@@ -788,12 +730,11 @@ class GameActivity : AppCompatActivity() {
         val input = EditText(this).apply { hint = "Name"; gravity = Gravity.CENTER }
 
         AlertDialog.Builder(this)
-            .setTitle("Game Over! Score: $score")
+            .setTitle("Game Over! Score: ${viewModel.score.value}")
             .setView(input)
             .setCancelable(false)
             .setPositiveButton("Submit") { _, _ ->
-                HighScoreManager.saveScore(this, input.text.toString().ifEmpty { "Player" }, score, gameMode)
-                startActivity(Intent(this, HighScoreActivity::class.java))
+                viewModel.saveScore(input.text.toString().ifEmpty { "Player" })
                 finish()
             }.show()
     }
@@ -801,7 +742,7 @@ class GameActivity : AppCompatActivity() {
     private fun showExitDialog() {
         AlertDialog.Builder(this)
             .setTitle("Exit?")
-            .setMessage("Abandon score of $score?")
+            .setMessage("Abandon score of ${viewModel.score.value}?")
             .setPositiveButton("Yes") { _, _ -> finish() }
             .setNegativeButton("No", null)
             .show()
@@ -862,7 +803,6 @@ class GameActivity : AppCompatActivity() {
         super.onDestroy()
         handler.removeCallbacksAndMessages(null)
         timerHandler.removeCallbacksAndMessages(null)
-        positiveTimeAnimator?.cancel()
         gameMusic.release()
         soundPool.release()
     }

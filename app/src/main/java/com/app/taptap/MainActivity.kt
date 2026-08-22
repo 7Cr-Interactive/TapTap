@@ -17,6 +17,9 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import com.app.bubblepop.GameActivity
 
+import dagger.hilt.android.AndroidEntryPoint
+
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
     private lateinit var launchMusic: MediaPlayer
