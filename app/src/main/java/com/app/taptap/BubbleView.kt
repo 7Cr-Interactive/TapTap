@@ -5,6 +5,12 @@ import android.graphics.*
 import android.view.View
 
 class BubbleView(context: Context) : View(context) {
+    enum class BubbleType {
+        NORMAL, FREEZE, RAINBOW, SHIELD, BLAST
+    }
+
+    var type: BubbleType = BubbleType.NORMAL
+
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val highlightPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
@@ -49,21 +55,38 @@ class BubbleView(context: Context) : View(context) {
         // 4. 🌈 THE CHROMATIC RAINBOW SPECTRUM OVERLAY
         // We project a subtle linear light spectrum diagonally across the bubble.
         // Using SRC_ATOP ensures it only applies to the existing transparent colors drawn in step 3.
-        val rainbowColors = intArrayOf(
-            Color.parseColor("#33FF0000"), // Soft Red (20% Opacity)
-            Color.parseColor("#22FFBB00"), // Soft Yellow (13% Opacity)
-            Color.parseColor("#2200FF66"), // Soft Green (13% Opacity)
-            Color.parseColor("#3300E1FF"), // Soft Cyan (20% Opacity)
-            Color.parseColor("#330044FF"), // Soft Blue (20% Opacity)
-            Color.parseColor("#44FF00CC")  // Soft Magenta (26% Opacity)
-        )
+        val rainbowColors = when(type) {
+            BubbleType.FREEZE -> intArrayOf(
+                Color.parseColor("#8800E5FF"), // Ice Cyan
+                Color.parseColor("#66FFFFFF"), // White
+                Color.parseColor("#8800B0FF")  // Deep Blue
+            )
+            BubbleType.SHIELD -> intArrayOf(
+                Color.parseColor("#AAFFD700"), // Gold
+                Color.parseColor("#88FFCC00"), // Yellow
+                Color.parseColor("#AAFFD700")  // Gold
+            )
+            BubbleType.BLAST -> intArrayOf(
+                Color.parseColor("#AAFF3D00"), // Bright Red
+                Color.parseColor("#88FF9100"), // Orange
+                Color.parseColor("#AAFF3D00")  // Bright Red
+            )
+            else -> intArrayOf(
+                Color.parseColor("#33FF0000"), // Soft Red (20% Opacity)
+                Color.parseColor("#22FFBB00"), // Soft Yellow (13% Opacity)
+                Color.parseColor("#2200FF66"), // Soft Green (13% Opacity)
+                Color.parseColor("#3300E1FF"), // Soft Cyan (20% Opacity)
+                Color.parseColor("#330044FF"), // Soft Blue (20% Opacity)
+                Color.parseColor("#44FF00CC")  // Soft Magenta (26% Opacity)
+            )
+        }
 
         // Diagonal coordinates from top-left to bottom-right mirror realistic refraction entry angles
         val spectrumShader = LinearGradient(
             centerX - radius, centerY - radius,
             centerX + radius, centerY + radius,
             rainbowColors,
-            floatArrayOf(0.0f, 0.2f, 0.4f, 0.6f, 0.8f, 1.0f),
+            null,
             Shader.TileMode.CLAMP
         )
 

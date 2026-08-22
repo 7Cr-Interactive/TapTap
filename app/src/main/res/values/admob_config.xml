@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- AdMob App ID (Google Test ID) -->
-    <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
+    <!-- AdMob App ID -->
+    <string name="admob_app_id">ca-app-pub-7044066942468352~3076443609</string>
     
-    <!-- AdMob Interstitial Ad Unit ID (Google Test ID) -->
-    <string name="admob_interstitial_ad_id">ca-app-pub-3940256099942544/1033173712</string>
+    <!-- AdMob Interstitial Ad Unit ID -->
+    <string name="interstatial">ca-app-pub-7044066942468352/7927890196</string>
 </resources>

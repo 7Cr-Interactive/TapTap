@@ -50,6 +50,7 @@ class GameActivity : AppCompatActivity() {
     private lateinit var comboPraiseText: TextView
     private lateinit var timeBar: ProgressBar
     private lateinit var modeIndicatorText: TextView
+    private lateinit var powerUpStatusText: TextView
 
     private lateinit var gameMusic: MediaPlayer
     private lateinit var soundPool: SoundPool
@@ -60,6 +61,9 @@ class GameActivity : AppCompatActivity() {
     private var score = 0
     private var combo = 0
     private var gameMode = "NORMAL"
+
+    private var isShieldActive = false
+    private var freezeDurationLeftMs = 0L
 
     private var mInterstitialAd: InterstitialAd? = null
 
@@ -144,6 +148,8 @@ class GameActivity : AppCompatActivity() {
         timeBar = findViewById(R.id.timeBar)
         timeBar.max = MAX_TIME_MS.toInt()
 
+        powerUpStatusText = findViewById(R.id.powerUpStatus)
+
         setupComboTextView()
         setupSoundPool()
 
@@ -164,7 +170,7 @@ class GameActivity : AppCompatActivity() {
     private fun loadInterstitialAd() {
         val adRequest = AdRequest.Builder().build()
         // Using Ad Unit ID from resources
-        InterstitialAd.load(this, getString(R.string.admob_interstitial_ad_id), adRequest,
+        InterstitialAd.load(this, getString(R.string.interstatial), adRequest,
             object : InterstitialAdLoadCallback() {
                 override fun onAdLoaded(interstitialAd: InterstitialAd) {
                     mInterstitialAd = interstitialAd
@@ -282,15 +288,29 @@ class GameActivity : AppCompatActivity() {
         bubbleSpawner = object : Runnable {
             override fun run() {
                 spawnBubble()
+                // Robustness: Spawn an extra bubble if screen is too empty
+                if (!hasEnoughBubbles()) {
+                    spawnBubble()
+                }
+                
                 val interval = if (gameMode == "ZIP") {
-                    250L
+                    200L
                 } else {
-                    (1100 - (score * 2.5)).toLong().coerceAtLeast(450L)
+                    (800 - (score * 2.0)).toLong().coerceAtLeast(300L)
                 }
                 handler.postDelayed(this, interval)
             }
         }
         handler.post(bubbleSpawner!!)
+    }
+
+    private fun hasEnoughBubbles(): Boolean {
+        var count = 0
+        for (i in 0 until gameLayout.childCount) {
+            val child = gameLayout.getChildAt(i)
+            if (child is BubbleView && child.tag != "particle") count++
+        }
+        return count >= 4
     }
 
     private fun startNailSpawner() {
@@ -315,10 +335,21 @@ class GameActivity : AppCompatActivity() {
         val size = if (gameMode == "ZIP") {
             Random.nextInt(350, 551)
         } else {
-            (240 - (score * 0.4f).toInt()).coerceAtLeast(100)
+            // Increased base size by 50% (240 -> 360) and minimum size (100 -> 150)
+            (360 - (score * 0.4f).toInt()).coerceAtLeast(150)
         }
         
         val view = BubbleView(this)
+
+        // Power-up Selection (15% total chance)
+        val roll = Random.nextInt(100)
+        when {
+            roll < 3 -> view.type = BubbleView.BubbleType.FREEZE
+            roll < 6 -> view.type = BubbleView.BubbleType.SHIELD
+            roll < 9 -> view.type = BubbleView.BubbleType.BLAST
+            roll < 12 -> view.type = BubbleView.BubbleType.RAINBOW
+            else -> view.type = BubbleView.BubbleType.NORMAL
+        }
 
         val params = FrameLayout.LayoutParams(size, size)
         params.leftMargin = Random.nextInt(0, (screenWidth - size).coerceAtLeast(1))
@@ -336,11 +367,33 @@ class GameActivity : AppCompatActivity() {
 
         view.setOnClickListener {
             handler.removeCallbacks(despawnRunnable)
-            combo++
-            score += if (combo > 10) 2 else 1
+            
+            when(view.type) {
+                BubbleView.BubbleType.FREEZE -> {
+                    freezeDurationLeftMs = 5000L
+                    showPowerUpStatus("FREEZE ACTIVE!", Color.CYAN)
+                }
+                BubbleView.BubbleType.SHIELD -> {
+                    isShieldActive = true
+                    showPowerUpStatus("SHIELD ACTIVE!", Color.YELLOW)
+                }
+                BubbleView.BubbleType.BLAST -> {
+                    popAllBubbles()
+                }
+                BubbleView.BubbleType.RAINBOW -> {
+                    score += 5
+                    combo += 20
+                    showPraise()
+                }
+                else -> {
+                    combo++
+                    score += if (combo > 10) 2 else 1
+                }
+            }
+            
             updateScore()
 
-            if (combo % 5 == 0) showPraise()
+            if (combo % 5 == 0 && view.type == BubbleView.BubbleType.NORMAL) showPraise()
 
             val pitch = (1f + combo * 0.02f).coerceAtMost(1.5f)
             soundPool.play(popSoundId, 1f, 1f, 1, 0, pitch)
@@ -364,9 +417,9 @@ class GameActivity : AppCompatActivity() {
         gameLayout.addView(view)
 
         val lifetime = if (gameMode == "ZIP") {
-            500L
+            800L
         } else {
-            (2200L - (score * 5L)).coerceAtLeast(600L)
+            (3500L - (score * 5L)).coerceAtLeast(1500L)
         }
         handler.postDelayed(despawnRunnable, lifetime)
     }
@@ -406,6 +459,14 @@ class GameActivity : AppCompatActivity() {
 
         view.setOnClickListener {
             handler.removeCallbacks(despawnRunnable)
+            
+            if (isShieldActive) {
+                isShieldActive = false
+                showPowerUpStatus("SHIELD BROKEN!", Color.WHITE)
+                if (view.parent != null) gameLayout.removeView(view)
+                return@setOnClickListener
+            }
+            
             combo = 0
             score = (score - 3).coerceAtLeast(0)
             updateScore()
@@ -437,6 +498,15 @@ class GameActivity : AppCompatActivity() {
         timerRunnable = object : Runnable {
             override fun run() {
                 val isAnimatingGain = positiveTimeAnimator?.isRunning == true
+
+                if (freezeDurationLeftMs > 0) {
+                    freezeDurationLeftMs -= TIMER_TICK_MS
+                    if (freezeDurationLeftMs <= 0) {
+                        powerUpStatusText.visibility = View.GONE
+                    }
+                    timerHandler.postDelayed(this, TIMER_TICK_MS)
+                    return
+                }
 
                 val drainPerSec = if (gameMode == "ZIP") {
                     1000.0
@@ -618,22 +688,99 @@ class GameActivity : AppCompatActivity() {
         handler.removeCallbacksAndMessages(null)
         timerHandler.removeCallbacksAndMessages(null)
 
-        val prefs = getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-        val gameCount = prefs.getInt("game_count", 0) + 1
-        prefs.edit().putInt("game_count", gameCount).apply()
-
-        if (gameCount % 5 == 0 && mInterstitialAd != null) {
+        if (mInterstitialAd != null) {
             mInterstitialAd?.fullScreenContentCallback = object : FullScreenContentCallback() {
                 override fun onAdDismissedFullScreenContent() {
+                    mInterstitialAd = null
+                    loadInterstitialAd()
                     showGameOverDialog()
                 }
                 override fun onAdFailedToShowFullScreenContent(adError: com.google.android.gms.ads.AdError) {
+                    mInterstitialAd = null
+                    loadInterstitialAd()
                     showGameOverDialog()
                 }
             }
             mInterstitialAd?.show(this)
         } else {
+            loadInterstitialAd()
             showGameOverDialog()
+        }
+    }
+
+    private fun popAllBubbles() {
+        val bubblesToPop = mutableListOf<BubbleView>()
+        var blastCenter = Pair(screenWidth / 2f, screenHeight / 2f)
+        
+        for (i in 0 until gameLayout.childCount) {
+            val child = gameLayout.getChildAt(i)
+            if (child is BubbleView && child.tag != "particle") {
+                bubblesToPop.add(child)
+                // If this is the blast bubble that was just clicked, use its position as center
+                if (child.type == BubbleView.BubbleType.BLAST) {
+                    blastCenter = Pair(child.x + child.width / 2, child.y + child.height / 2)
+                }
+            }
+        }
+        
+        showBubbleClusterBurst(blastCenter.first, blastCenter.second)
+        
+        bubblesToPop.forEach { bubble ->
+            score += 1
+            playPopAnimation(bubble)
+            // Smaller bursts for the collateral bubbles
+            showParticleBurst(bubble.x + bubble.width/2, bubble.y + bubble.height/2)
+        }
+        updateScore()
+        showPowerUpStatus("BLAST!", Color.RED)
+    }
+
+    private fun showBubbleClusterBurst(x: Float, y: Float) {
+        repeat(20) {
+            val size = Random.nextInt(40, 100)
+            val p = BubbleView(this).apply {
+                tag = "particle"
+                layoutParams = FrameLayout.LayoutParams(size, size)
+                this.x = x - size / 2
+                this.y = y - size / 2
+                alpha = 0.8f
+            }
+            gameLayout.addView(p)
+
+            val angle = Math.toRadians(Random.nextInt(360).toDouble())
+            val dist = Random.nextInt(200, 600).toFloat()
+            val tx = x + (Math.cos(angle) * dist).toFloat() - size / 2
+            val ty = y + (Math.sin(angle) * dist).toFloat() - size / 2
+
+            val ax = ObjectAnimator.ofFloat(p, "x", p.x, tx)
+            val ay = ObjectAnimator.ofFloat(p, "y", p.y, ty)
+            val scaleX = ObjectAnimator.ofFloat(p, "scaleX", 1f, 1.5f, 0f)
+            val scaleY = ObjectAnimator.ofFloat(p, "scaleY", 1f, 1.5f, 0f)
+            val fade = ObjectAnimator.ofFloat(p, "alpha", 0.8f, 0f)
+
+            AnimatorSet().apply {
+                duration = Random.nextLong(600, 1000)
+                playTogether(ax, ay, scaleX, scaleY, fade)
+                addListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(a: Animator) { gameLayout.removeView(p) }
+                })
+                start()
+            }
+        }
+    }
+
+    private fun showPowerUpStatus(text: String, color: Int) {
+        powerUpStatusText.text = text
+        powerUpStatusText.setTextColor(color)
+        powerUpStatusText.visibility = View.VISIBLE
+        
+        // Auto-hide after some time if not freeze (freeze hides via timer)
+        if (!text.contains("FREEZE")) {
+            handler.postDelayed({
+                if (powerUpStatusText.text == text) {
+                    powerUpStatusText.visibility = View.GONE
+                }
+            }, 2000)
         }
     }
 
