@@ -9,9 +9,18 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
+import com.app.taptap.ads.AdManager
+import com.app.taptap.analytics.AnalyticsManager
 import com.app.taptap.databinding.ActivityHelpBinding
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class HelpActivity : AppCompatActivity() {
+
+    @Inject lateinit var analyticsManager: AnalyticsManager
+    @Inject lateinit var adManager: AdManager
+
     private lateinit var binding: ActivityHelpBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,15 +40,18 @@ class HelpActivity : AppCompatActivity() {
             insets
         }
 
+        analyticsManager.logScreenView("Help & Support", "HelpActivity")
+
+        // Load banner ad
+        adManager.loadAdaptiveBanner(this, binding.bannerContainer)
+
         // Set help text content
         binding.helpText.text = """
             
             
 ❤️ SUPPORT INDEPENDENT DEVELOPMENT
 
-TapTap is a completely offline and ad-free game created by 7Cr Interactive.
-
-We intentionally chose to avoid intrusive ads, tracking, and unnecessary permissions to keep the experience calm, lightweight, and distraction-free.
+TapTap is an offline reflex game created by 7Cr Interactive.
 
 If you enjoy the game and would like to support future updates and independent game development, you can support us using the QR code above.
 
@@ -100,6 +112,7 @@ Thank you for playing TapTap ❤️
 """.trimIndent()
 
         binding.supportQr.setOnClickListener {
+            analyticsManager.logSupportQrClicked()
 
             val upiUri = Uri.parse(
                 "upi://pay?pa=kodabalprabhuraj@ybl&pn=7Cr Interactive&cu=INR"

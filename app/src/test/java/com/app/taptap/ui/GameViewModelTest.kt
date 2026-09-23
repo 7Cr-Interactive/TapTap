@@ -18,6 +18,7 @@ class GameViewModelTest {
         override suspend fun insertScore(score: ScoreEntity) {}
         override fun getAllAchievements(): Flow<List<AchievementEntity>> = emptyFlow()
         override suspend fun unlockAchievement(id: String, timestamp: Long) {}
+        override suspend fun clearScores(mode: String) {}
     }
 
     @Before

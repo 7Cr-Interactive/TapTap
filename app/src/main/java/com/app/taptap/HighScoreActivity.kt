@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
@@ -16,12 +17,13 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 
+import com.app.taptap.ads.AdManager
+import com.app.taptap.analytics.AnalyticsManager
 import com.app.taptap.data.TapTapDao
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -29,6 +31,9 @@ import javax.inject.Inject
 class HighScoreActivity : AppCompatActivity() {
 
     @Inject lateinit var dao: TapTapDao
+    @Inject lateinit var analyticsManager: AnalyticsManager
+    @Inject lateinit var adManager: AdManager
+
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     
     private var currentMode = "NORMAL"
@@ -53,6 +58,12 @@ class HighScoreActivity : AppCompatActivity() {
         }
 
         setupSoundPool()
+        analyticsManager.logScreenView("High Scores", "HighScoreActivity")
+
+        val bannerContainer = findViewById<FrameLayout>(R.id.bannerContainer)
+        if (bannerContainer != null) {
+            adManager.loadAdaptiveBanner(this, bannerContainer)
+        }
 
         val normalScoresBtn = findViewById<Button>(R.id.normalScoresBtn)
         val zipScoresBtn = findViewById<Button>(R.id.zipScoresBtn)
@@ -85,6 +96,7 @@ class HighScoreActivity : AppCompatActivity() {
                 .setMessage("Are you sure you want to delete all high scores for $currentMode mode?")
                 .setPositiveButton("Yes") { _, _ ->
                     playClickSound()
+                    analyticsManager.logHighScoresReset(currentMode)
                     scope.launch {
                         dao.clearScores(currentMode)
                         loadScores(currentMode)
@@ -110,6 +122,7 @@ class HighScoreActivity : AppCompatActivity() {
     }
 
     private fun loadScores(mode: String) {
+        analyticsManager.logHighScoresViewed(mode)
         val scoreListLayout = findViewById<LinearLayout>(R.id.scoreList)
         scoreListLayout.removeAllViews()
 

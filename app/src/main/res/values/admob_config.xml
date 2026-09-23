@@ -1,8 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- AdMob App ID -->
-    <string name="admob_app_id">ca-app-pub-7044066942468352~3076443609</string>
-    
-    <!-- AdMob Interstitial Ad Unit ID -->
-    <string name="interstatial">ca-app-pub-7044066942468352/7927890196</string>
+    <string name="admob_app_id">ca-app-pub-1175323508141587~3076443609</string>
+
+    <!-- AdMob Ad Unit IDs -->
+    <string name="banner_ad_unit_id">ca-app-pub-1175323508141587/1049807418</string>
+    <string name="interstitial_ad_unit_id">ca-app-pub-1175323508141587/1672623940</string>
+    <string name="interstatial">ca-app-pub-1175323508141587/1672623940</string> <!-- Backwards compatibility -->
+    <string name="rewarded_ad_unit_id">ca-app-pub-1175323508141587/3404508014</string>
+    <string name="rewarded_interstitial_ad_unit_id">ca-app-pub-1175323508141587/2115477070</string>
+    <string name="app_open_ad_unit_id">ca-app-pub-1175323508141587/6872979737</string>
 </resources>

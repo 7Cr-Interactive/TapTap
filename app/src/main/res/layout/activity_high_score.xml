@@ -11,9 +11,17 @@
         android:src="@drawable/background_wallpaper"
         android:scaleType="centerCrop" />
 
+    <FrameLayout
+        android:id="@+id/bannerContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:gravity="center" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_above="@id/bannerContainer"
         android:orientation="vertical"
         android:padding="16dp"
         android:gravity="center_horizontal">

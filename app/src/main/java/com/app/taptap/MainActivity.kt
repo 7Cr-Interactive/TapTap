@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
+import android.widget.FrameLayout
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AlertDialog
@@ -16,11 +17,17 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import com.app.bubblepop.GameActivity
+import com.app.taptap.ads.AdManager
+import com.app.taptap.analytics.AnalyticsManager
 
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
+
+    @Inject lateinit var analyticsManager: AnalyticsManager
+    @Inject lateinit var adManager: AdManager
 
     private lateinit var launchMusic: MediaPlayer
     private lateinit var soundPool: SoundPool
@@ -44,6 +51,18 @@ class MainActivity : AppCompatActivity() {
         }
 
         setupSoundPool()
+        analyticsManager.logScreenView("Main Menu", "MainActivity")
+
+        // Load Banner Ad
+        val bannerContainer = findViewById<FrameLayout>(R.id.bannerContainer)
+        if (bannerContainer != null) {
+            adManager.loadAdaptiveBanner(this, bannerContainer)
+        }
+
+        // Preload Interstitial and Rewarded Ads for gameplay
+        adManager.preloadInterstitialAd(this)
+        adManager.preloadRewardedAd(this)
+        adManager.preloadRewardedInterstitialAd(this)
 
         // Initialize launch music
         launchMusic = MediaPlayer.create(this, R.raw.launch_music).apply {
@@ -60,16 +79,33 @@ class MainActivity : AppCompatActivity() {
 
         val startButton: Button = findViewById(R.id.startButton)
         val zipModeButton: Button = findViewById(R.id.zipModeButton)
+        val boosterStartButton: Button = findViewById(R.id.boosterStartButton)
         val highscoreButton: Button = findViewById(R.id.highscoreButton)
 
         startButton.setOnClickListener {
             playClickSound()
-            startGame("NORMAL")
+            startGame("NORMAL", withBooster = false)
         }
 
         zipModeButton.setOnClickListener {
             playClickSound()
-            startGame("ZIP")
+            startGame("ZIP", withBooster = false)
+        }
+
+        boosterStartButton.setOnClickListener {
+            playClickSound()
+            if (adManager.isRewardedAdLoaded()) {
+                adManager.showRewardedAd(
+                    activity = this,
+                    onUserEarnedReward = {
+                        startGame("NORMAL", withBooster = true)
+                    },
+                    onAdClosed = {}
+                )
+            } else {
+                // Fallback if ad is still loading
+                startGame("NORMAL", withBooster = true)
+            }
         }
 
         highscoreButton.setOnClickListener {
@@ -89,12 +125,13 @@ class MainActivity : AppCompatActivity() {
         soundPool.play(bubbleSoundId, 1f, 1f, 1, 0, 1f)
     }
 
-    private fun startGame(mode: String) {
+    private fun startGame(mode: String, withBooster: Boolean) {
         if (launchMusic.isPlaying) {
             launchMusic.pause()
         }
         val intent = Intent(this, GameActivity::class.java)
         intent.putExtra("GAME_MODE", mode)
+        intent.putExtra("START_BOOSTER", withBooster)
         startActivity(intent)
     }
 

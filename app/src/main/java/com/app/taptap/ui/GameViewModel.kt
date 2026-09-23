@@ -2,6 +2,7 @@ package com.app.taptap.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.app.taptap.analytics.AnalyticsManager
 import com.app.taptap.data.ScoreEntity
 import com.app.taptap.data.TapTapDao
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -12,7 +13,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class GameViewModel @Inject constructor(
-    private val dao: TapTapDao
+    private val dao: TapTapDao,
+    private val analyticsManager: AnalyticsManager? = null
 ) : ViewModel() {
 
     private val _score = MutableStateFlow(0)
@@ -36,10 +38,24 @@ class GameViewModel @Inject constructor(
     var gameMode = "NORMAL"
     var maxTimeMs = 100000.0
 
-    fun initGame(mode: String) {
+    var hasRevived = false
+        private set
+
+    var hasDoubledScore = false
+        private set
+
+    fun initGame(mode: String, startWithBooster: Boolean = false) {
         gameMode = mode
         maxTimeMs = if (mode == "ZIP") 60000.0 else 100000.0
         _timeRemainingMs.value = maxTimeMs
+        _isGameOver.value = false
+        hasRevived = false
+        hasDoubledScore = false
+
+        if (startWithBooster) {
+            activateShield()
+            activateFreeze()
+        }
     }
 
     fun incrementScore(type: String) {
@@ -77,6 +93,26 @@ class GameViewModel @Inject constructor(
         _isShieldActive.value = true
     }
 
+    fun canRevive(): Boolean = !hasRevived
+
+    fun reviveGame() {
+        if (!hasRevived) {
+            hasRevived = true
+            _isGameOver.value = false
+            _timeRemainingMs.value = (maxTimeMs * 0.5).coerceAtLeast(30000.0)
+            activateShield()
+        }
+    }
+
+    fun canDoubleScore(): Boolean = !hasDoubledScore
+
+    fun doubleScore() {
+        if (!hasDoubledScore) {
+            hasDoubledScore = true
+            _score.value = _score.value * 2
+        }
+    }
+
     fun updateTime(deltaMs: Long) {
         if (_freezeDurationLeftMs.value > 0) {
             _freezeDurationLeftMs.value = (_freezeDurationLeftMs.value - deltaMs).coerceAtLeast(0)
@@ -101,6 +137,7 @@ class GameViewModel @Inject constructor(
     }
 
     fun saveScore(name: String) {
+        analyticsManager?.logScoreSubmitted(gameMode, _score.value)
         viewModelScope.launch {
             dao.insertScore(ScoreEntity(name = name, score = _score.value, mode = gameMode))
         }
@@ -109,6 +146,7 @@ class GameViewModel @Inject constructor(
     private fun checkAchievements() {
         viewModelScope.launch {
             if (_combo.value >= 50) {
+                analyticsManager?.logAchievementUnlocked("combo_king")
                 dao.unlockAchievement("combo_king", System.currentTimeMillis())
             }
         }

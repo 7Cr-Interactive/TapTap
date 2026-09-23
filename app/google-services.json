@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1053753524150",
+    "project_id": "taptap-4f0af",
+    "storage_bucket": "taptap-4f0af.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1053753524150:android:1f75b194036c86b4ed4b17",
+        "android_client_info": {
+          "package_name": "com.app.taptap"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDH5bn9YhbuGGEJqQLM0W2BANqMKWci5PU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

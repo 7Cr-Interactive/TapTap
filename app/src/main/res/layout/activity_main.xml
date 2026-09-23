@@ -19,11 +19,19 @@
         android:layout_margin="20dp"
         android:textStyle="bold" />
 
-    <LinearLayout
+    <!-- Banner Ad Container at Bottom -->
+    <FrameLayout
+        android:id="@+id/bannerContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_marginBottom="50dp"
+        android:gravity="center" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/bannerContainer"
+        android:layout_marginBottom="16dp"
         android:gravity="center"
         android:orientation="vertical"
         android:padding="20dp">
@@ -47,6 +55,18 @@
             android:textColor="#FFFFFF"
             android:background="@drawable/glass_button_bg"
             android:elevation="4dp"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp" />
+
+        <Button
+            android:id="@+id/boosterStartButton"
+            android:layout_width="240dp"
+            android:layout_height="54dp"
+            android:text="🎁 START WITH BOOSTER"
+            android:textColor="#FFEB3B"
+            android:background="@drawable/glass_button_bg"
+            android:elevation="4dp"
+            android:textSize="13sp"
             android:textStyle="bold"
             android:layout_marginBottom="12dp" />
 

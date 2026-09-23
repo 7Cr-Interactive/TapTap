@@ -29,19 +29,13 @@ import kotlin.random.Random
 import android.animation.ObjectAnimator
 import androidx.core.animation.doOnEnd
 
-// Ads imports
-import com.google.android.gms.ads.AdRequest
-import com.google.android.gms.ads.LoadAdError
-import com.google.android.gms.ads.MobileAds
-import com.google.android.gms.ads.interstitial.InterstitialAd
-import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
-import com.google.android.gms.ads.FullScreenContentCallback
-
 // Explicitly import components from the taptap package
 import com.app.taptap.R
 import com.app.taptap.BubbleView
 import com.app.taptap.HighScoreManager
 import com.app.taptap.HighScoreActivity
+import com.app.taptap.ads.AdManager
+import com.app.taptap.analytics.AnalyticsManager
 
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -55,6 +49,8 @@ import javax.inject.Inject
 class GameActivity : AppCompatActivity() {
 
     @Inject lateinit var hapticManager: HapticManager
+    @Inject lateinit var analyticsManager: AnalyticsManager
+    @Inject lateinit var adManager: AdManager
     private val viewModel: GameViewModel by viewModels()
 
     private lateinit var gameLayout: FrameLayout
@@ -69,8 +65,6 @@ class GameActivity : AppCompatActivity() {
 
     private var popSoundId = 0
     private var hitSoundId = 0
-
-    private var mInterstitialAd: InterstitialAd? = null
 
     private val handler = Handler(Looper.getMainLooper())
     private val timerHandler = Handler(Looper.getMainLooper())
@@ -105,11 +99,16 @@ class GameActivity : AppCompatActivity() {
             insets
         }
 
-        MobileAds.initialize(this) {}
-        loadInterstitialAd()
+        // Preload Ads
+        adManager.preloadInterstitialAd(this)
+        adManager.preloadRewardedAd(this)
+        adManager.preloadRewardedInterstitialAd(this)
 
         val gameMode = intent.getStringExtra("GAME_MODE") ?: "NORMAL"
-        viewModel.initGame(gameMode)
+        val startWithBooster = intent.getBooleanExtra("START_BOOSTER", false)
+        viewModel.initGame(gameMode, startWithBooster)
+        analyticsManager.logScreenView("Game Screen", "GameActivity")
+        analyticsManager.logGameStart(gameMode)
 
         val bgAnim = findViewById<LottieAnimationView>(R.id.bgAnimation)
         bgAnim.scaleX = 1f
@@ -160,20 +159,6 @@ class GameActivity : AppCompatActivity() {
         animateSun()
         startFlowerParticles()
         startGame()
-    }
-
-    private fun loadInterstitialAd() {
-        val adRequest = AdRequest.Builder().build()
-        // Using Ad Unit ID from resources
-        InterstitialAd.load(this, getString(R.string.interstatial), adRequest,
-            object : InterstitialAdLoadCallback() {
-                override fun onAdLoaded(interstitialAd: InterstitialAd) {
-                    mInterstitialAd = interstitialAd
-                }
-                override fun onAdFailedToLoad(adError: LoadAdError) {
-                    mInterstitialAd = null
-                }
-            })
     }
 
     private fun animateSun() {
@@ -272,7 +257,10 @@ class GameActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             viewModel.combo.collect { combo ->
-                if (combo % 5 == 0 && combo > 0) showPraise()
+                if (combo % 5 == 0 && combo > 0) {
+                    analyticsManager.logComboMilestone(combo)
+                    showPraise()
+                }
             }
         }
 
@@ -290,14 +278,19 @@ class GameActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             viewModel.isShieldActive.collect { active ->
-                if (active) showPowerUpStatus("SHIELD ACTIVE!", Color.YELLOW)
+                if (active) {
+                    analyticsManager.logPowerUpActivated("SHIELD")
+                    showPowerUpStatus("SHIELD ACTIVE!", Color.YELLOW)
+                }
             }
         }
         
         lifecycleScope.launch {
             viewModel.freezeDurationLeftMs.collect { duration ->
-                if (duration > 0) showPowerUpStatus("FREEZE ACTIVE!", Color.CYAN)
-                else if (duration == 0L && powerUpStatusText.text == "FREEZE ACTIVE!") {
+                if (duration > 0) {
+                    analyticsManager.logPowerUpActivated("FREEZE")
+                    showPowerUpStatus("FREEZE ACTIVE!", Color.CYAN)
+                } else if (duration == 0L && powerUpStatusText.text == "FREEZE ACTIVE!") {
                     powerUpStatusText.visibility = View.GONE
                 }
             }
@@ -328,7 +321,6 @@ class GameActivity : AppCompatActivity() {
         bubbleSpawner = object : Runnable {
             override fun run() {
                 spawnBubble()
-                // Robustness: Spawn an extra bubble if screen is too empty
                 if (!hasEnoughBubbles()) {
                     spawnBubble()
                 }
@@ -361,9 +353,9 @@ class GameActivity : AppCompatActivity() {
                     consecutiveNails++
                 }
                 val interval = if (viewModel.gameMode == "ZIP") {
-                    400L // Faster from 500L
+                    400L
                 } else {
-                    (1600L - (viewModel.score.value * 5L)).coerceAtLeast(500L) // Faster reduction and floor
+                    (1600L - (viewModel.score.value * 5L)).coerceAtLeast(500L)
                 }
                 handler.postDelayed(this, interval)
             }
@@ -381,7 +373,6 @@ class GameActivity : AppCompatActivity() {
         val view = BubbleView(this)
         view.setShrink(viewModel.getShrinkFactor())
 
-        // Power-up Selection (15% total chance)
         val roll = Random.nextInt(100)
         when {
             roll < 3 -> view.type = BubbleView.BubbleType.FREEZE
@@ -401,7 +392,6 @@ class GameActivity : AppCompatActivity() {
         val despawnRunnable = Runnable {
             if (view.parent != null) {
                 gameLayout.removeView(view)
-                // We don't reset combo here as it's now handled by the VM or just left to break naturally
             }
         }
 
@@ -410,6 +400,8 @@ class GameActivity : AppCompatActivity() {
             hapticManager.vibratePop()
             handler.removeCallbacks(despawnRunnable)
             
+            analyticsManager.logBubblePop(view.type.name, viewModel.combo.value)
+
             when(view.type) {
                 BubbleView.BubbleType.FREEZE -> viewModel.activateFreeze()
                 BubbleView.BubbleType.SHIELD -> viewModel.activateShield()
@@ -474,7 +466,10 @@ class GameActivity : AppCompatActivity() {
             hapticManager.vibrateHit()
             handler.removeCallbacks(despawnRunnable)
             
-            if (viewModel.isShieldActive.value) {
+            val isShielded = viewModel.isShieldActive.value
+            analyticsManager.logNailHit(isShielded, viewModel.score.value, viewModel.combo.value)
+
+            if (isShielded) {
                 viewModel.hitNail()
                 showPowerUpStatus("SHIELD BROKEN!", Color.WHITE)
                 if (view.parent != null) gameLayout.removeView(view)
@@ -629,28 +624,14 @@ class GameActivity : AppCompatActivity() {
     }
 
     private fun gameOver() {
-        gameMusic.stop()
+        analyticsManager.logGameOver(viewModel.gameMode, viewModel.score.value, viewModel.combo.value)
+        if (::gameMusic.isInitialized && gameMusic.isPlaying) {
+            gameMusic.pause()
+        }
         handler.removeCallbacksAndMessages(null)
         timerHandler.removeCallbacksAndMessages(null)
 
-        if (mInterstitialAd != null) {
-            mInterstitialAd?.fullScreenContentCallback = object : FullScreenContentCallback() {
-                override fun onAdDismissedFullScreenContent() {
-                    mInterstitialAd = null
-                    loadInterstitialAd()
-                    showGameOverDialog()
-                }
-                override fun onAdFailedToShowFullScreenContent(adError: com.google.android.gms.ads.AdError) {
-                    mInterstitialAd = null
-                    loadInterstitialAd()
-                    showGameOverDialog()
-                }
-            }
-            mInterstitialAd?.show(this)
-        } else {
-            loadInterstitialAd()
-            showGameOverDialog()
-        }
+        showGameOverDialog()
     }
 
     private fun popAllBubbles() {
@@ -716,7 +697,6 @@ class GameActivity : AppCompatActivity() {
         powerUpStatusText.setTextColor(color)
         powerUpStatusText.visibility = View.VISIBLE
         
-        // Auto-hide after some time if not freeze (freeze hides via observer)
         if (!text.contains("FREEZE") && !text.contains("SHIELD ACTIVE")) {
             handler.postDelayed({
                 if (powerUpStatusText.text == text) {
@@ -726,20 +706,70 @@ class GameActivity : AppCompatActivity() {
         }
     }
 
-    private fun showGameOverDialog() {
-        val input = EditText(this).apply { hint = "Name"; gravity = Gravity.CENTER }
+    private fun reviveAndResumeGame() {
+        viewModel.reviveGame()
+        // Clean active views from screen
+        for (i in gameLayout.childCount - 1 downTo 0) {
+            val child = gameLayout.getChildAt(i)
+            if (child is BubbleView || child.tag == "nail") {
+                gameLayout.removeView(child)
+            }
+        }
+        if (::gameMusic.isInitialized) {
+            gameMusic.start()
+        }
+        startGame()
+    }
 
-        AlertDialog.Builder(this)
+    private fun showGameOverDialog() {
+        val input = EditText(this).apply { hint = "Player Name"; gravity = Gravity.CENTER }
+
+        val builder = AlertDialog.Builder(this)
             .setTitle("Game Over! Score: ${viewModel.score.value}")
+            .setMessage("Watch a short ad to Revive or Double your Score!")
             .setView(input)
             .setCancelable(false)
-            .setPositiveButton("Submit") { _, _ ->
-                viewModel.saveScore(input.text.toString().ifEmpty { "Player" })
-                finish()
-            }.show()
+            .setPositiveButton("Submit & Exit") { _, _ ->
+                val name = input.text.toString().ifEmpty { "Player" }
+                adManager.showInterstitialAd(this) {
+                    viewModel.saveScore(name)
+                    finish()
+                }
+            }
+
+        if (viewModel.canRevive()) {
+            builder.setNeutralButton("💚 Revive (+30s & Shield)") { _, _ ->
+                adManager.showRewardedAd(
+                    activity = this,
+                    onUserEarnedReward = {
+                        reviveAndResumeGame()
+                    },
+                    onAdClosed = {
+                        if (!viewModel.isShieldActive.value && viewModel.isGameOver.value) {
+                            showGameOverDialog()
+                        }
+                    }
+                )
+            }
+        } else if (viewModel.canDoubleScore()) {
+            builder.setNegativeButton("⭐ 2x Score") { _, _ ->
+                adManager.showRewardedInterstitialAd(
+                    activity = this,
+                    onUserEarnedReward = {
+                        viewModel.doubleScore()
+                    },
+                    onAdClosed = {
+                        showGameOverDialog()
+                    }
+                )
+            }
+        }
+
+        builder.show()
     }
 
     private fun showExitDialog() {
+        analyticsManager.logGameExit(viewModel.gameMode, viewModel.score.value)
         AlertDialog.Builder(this)
             .setTitle("Exit?")
             .setMessage("Abandon score of ${viewModel.score.value}?")
@@ -803,7 +833,9 @@ class GameActivity : AppCompatActivity() {
         super.onDestroy()
         handler.removeCallbacksAndMessages(null)
         timerHandler.removeCallbacksAndMessages(null)
-        gameMusic.release()
+        if (::gameMusic.isInitialized) {
+            gameMusic.release()
+        }
         soundPool.release()
     }
 }

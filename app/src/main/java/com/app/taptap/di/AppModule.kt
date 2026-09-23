@@ -30,4 +30,16 @@ object AppModule {
     fun provideDao(database: TapTapDatabase): TapTapDao {
         return database.dao()
     }
+
+    @Provides
+    @Singleton
+    fun provideContext(@ApplicationContext context: Context): Context {
+        return context
+    }
+
+    @Provides
+    @Singleton
+    fun provideFirebaseAnalytics(@ApplicationContext context: Context): com.google.firebase.analytics.FirebaseAnalytics {
+        return com.google.firebase.analytics.FirebaseAnalytics.getInstance(context)
+    }
 }
