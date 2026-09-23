@@ -2,22 +2,36 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <ImageView
-        android:id="@+id/backgroundImage"
+    <!-- 🌟 Dynamic 90s Kids Cartoon Scenery Background -->
+    <com.app.taptap.ui.cartoon.CartoonSceneryView
+        android:id="@+id/cartoonSceneryView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Ambient floating decorative bubbles container -->
+    <FrameLayout
+        android:id="@+id/bubbleContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:src="@drawable/background_wallpaper"
-        android:scaleType="centerCrop" />
+        android:layout_above="@id/bannerContainer" />
 
+    <!-- ❓ Help Button Pill -->
     <TextView
         android:id="@+id/helpTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Help?"
-        android:textColor="#090909"
+        android:text="❓ Help"
+        android:textColor="#FFFFFF"
+        android:background="@drawable/score_pill_bg"
         android:layout_alignParentTop="true"
         android:layout_margin="20dp"
-        android:textStyle="bold" />
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:elevation="6dp" />
 
     <!-- Banner Ad Container at Bottom -->
     <FrameLayout
@@ -36,48 +50,61 @@
         android:orientation="vertical"
         android:padding="20dp">
 
+        <!-- 🎨 TapTap Game Title Logo -->
+        <ImageView
+            android:id="@+id/logoView"
+            android:layout_width="260dp"
+            android:layout_height="180dp"
+            android:src="@drawable/game_logo"
+            android:scaleType="fitCenter"
+            android:layout_marginBottom="24dp"/>
+
         <Button
             android:id="@+id/startButton"
-            android:layout_width="240dp"
+            android:layout_width="250dp"
             android:layout_height="64dp"
-            android:text="NORMAL MODE"
+            android:text="PLAY NORMAL MODE"
             android:textColor="#FFFFFF"
-            android:background="@drawable/glass_button_bg"
-            android:elevation="4dp"
+            android:textSize="17sp"
             android:textStyle="bold"
-            android:layout_marginBottom="12dp" />
+            android:background="@drawable/btn_cartoon_orange"
+            android:elevation="6dp"
+            android:layout_marginBottom="14dp" />
 
         <Button
             android:id="@+id/zipModeButton"
-            android:layout_width="240dp"
+            android:layout_width="250dp"
             android:layout_height="64dp"
-            android:text="1 MIN ZIP"
+            android:text="⚡ 1 MIN ZIP MODE"
             android:textColor="#FFFFFF"
-            android:background="@drawable/glass_button_bg"
-            android:elevation="4dp"
+            android:textSize="17sp"
             android:textStyle="bold"
-            android:layout_marginBottom="12dp" />
+            android:background="@drawable/btn_cartoon_cyan"
+            android:elevation="6dp"
+            android:layout_marginBottom="14dp" />
 
         <Button
             android:id="@+id/boosterStartButton"
-            android:layout_width="240dp"
-            android:layout_height="54dp"
-            android:text="🎁 START WITH BOOSTER"
-            android:textColor="#FFEB3B"
-            android:background="@drawable/glass_button_bg"
-            android:elevation="4dp"
-            android:textSize="13sp"
+            android:layout_width="250dp"
+            android:layout_height="60dp"
+            android:text="🎬 WATCH AD FOR BOOSTER"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
             android:textStyle="bold"
-            android:layout_marginBottom="12dp" />
+            android:background="@drawable/btn_cartoon_gold"
+            android:elevation="6dp"
+            android:layout_marginBottom="14dp" />
 
         <Button
             android:id="@+id/highscoreButton"
-            android:layout_width="200dp"
-            android:layout_height="50dp"
-            android:text="Highscores"
-            android:textColor="#E0E0E0"
-            android:background="@android:color/transparent"
-            android:textAllCaps="false" />
+            android:layout_width="220dp"
+            android:layout_height="54dp"
+            android:text="🏆 HIGHSCORES"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:background="@drawable/btn_cartoon_purple"
+            android:elevation="6dp" />
 
     </LinearLayout>
 

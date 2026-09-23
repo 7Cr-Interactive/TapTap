@@ -59,6 +59,10 @@ class GameActivity : AppCompatActivity() {
     private lateinit var timeBar: ProgressBar
     private lateinit var modeIndicatorText: TextView
     private lateinit var powerUpStatusText: TextView
+    private lateinit var freezeOverlay: View
+    private lateinit var warningVignette: View
+
+    private var warningPulseAnimator: ObjectAnimator? = null
 
     private lateinit var gameMusic: MediaPlayer
     private lateinit var soundPool: SoundPool
@@ -88,6 +92,9 @@ class GameActivity : AppCompatActivity() {
         setContentView(R.layout.activity_game)
 
         gameLayout = findViewById(R.id.gameLayout)
+        freezeOverlay = findViewById(R.id.freezeOverlay)
+        warningVignette = findViewById(R.id.warningVignette)
+
         ViewCompat.setOnApplyWindowInsetsListener(gameLayout) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.updatePadding(
@@ -110,13 +117,7 @@ class GameActivity : AppCompatActivity() {
         analyticsManager.logScreenView("Game Screen", "GameActivity")
         analyticsManager.logGameStart(gameMode)
 
-        val bgAnim = findViewById<LottieAnimationView>(R.id.bgAnimation)
-        bgAnim.scaleX = 1f
-        bgAnim.scaleY = 1f
         startRandomBirds()
-        bgAnim.setRenderMode(RenderMode.HARDWARE)
-        bgAnim.repeatCount = LottieDrawable.INFINITE
-        bgAnim.speed = 1f
 
         val metrics = DisplayMetrics()
         windowManager.defaultDisplay.getMetrics(metrics)
@@ -156,28 +157,8 @@ class GameActivity : AppCompatActivity() {
             override fun handleOnBackPressed() { showExitDialog() }
         })
 
-        animateSun()
         startFlowerParticles()
         startGame()
-    }
-
-    private fun animateSun() {
-        val sun = findViewById<View>(R.id.sunView)
-        val scaleX = ObjectAnimator.ofFloat(sun, View.SCALE_X, 1f, 1.08f)
-        val scaleY = ObjectAnimator.ofFloat(sun, View.SCALE_Y, 1f, 1.08f)
-        val floatY = ObjectAnimator.ofFloat(sun, View.TRANSLATION_Y, 0f, -20f)
-
-        listOf(scaleX, scaleY, floatY).forEach {
-            it.repeatCount = ValueAnimator.INFINITE
-            it.repeatMode = ValueAnimator.REVERSE
-        }
-
-        AnimatorSet().apply {
-            playTogether(scaleX, scaleY, floatY)
-            duration = 5000
-            interpolator = android.view.animation.DecelerateInterpolator()
-            start()
-        }
     }
 
     // ---------------- DIRECTING STATE ----------------
@@ -216,7 +197,7 @@ class GameActivity : AppCompatActivity() {
     }
 
     private fun startRandomBirds() {
-        val bird = findViewById<LottieAnimationView>(R.id.birdView)
+        val bird = findViewById<LottieAnimationView>(R.id.birdView) ?: return
         fun launchBird() {
             val flyLeftToRight = Random.nextBoolean()
             val startY = Random.nextInt(80, 350).toFloat()
@@ -290,8 +271,15 @@ class GameActivity : AppCompatActivity() {
                 if (duration > 0) {
                     analyticsManager.logPowerUpActivated("FREEZE")
                     showPowerUpStatus("FREEZE ACTIVE!", Color.CYAN)
-                } else if (duration == 0L && powerUpStatusText.text == "FREEZE ACTIVE!") {
-                    powerUpStatusText.visibility = View.GONE
+                    freezeOverlay.visibility = View.VISIBLE
+                    freezeOverlay.animate().alpha(1f).setDuration(300).start()
+                } else if (duration == 0L) {
+                    freezeOverlay.animate().alpha(0f).setDuration(300).withEndAction {
+                        freezeOverlay.visibility = View.GONE
+                    }.start()
+                    if (powerUpStatusText.text == "FREEZE ACTIVE!") {
+                        powerUpStatusText.visibility = View.GONE
+                    }
                 }
             }
         }
@@ -307,9 +295,13 @@ class GameActivity : AppCompatActivity() {
         updateTimeBarColor(timeMs)
     }
 
+    private var isGamePaused = false
+    private var pauseDialog: AlertDialog? = null
+
     // ---------------- GAME START ----------------
 
     private fun startGame() {
+        isGamePaused = false
         startTimer()
         startBubbleSpawner()
         startNailSpawner()
@@ -318,11 +310,14 @@ class GameActivity : AppCompatActivity() {
     // ---------------- SPAWN ENGINE ----------------
 
     private fun startBubbleSpawner() {
+        bubbleSpawner?.let { handler.removeCallbacks(it) }
         bubbleSpawner = object : Runnable {
             override fun run() {
-                spawnBubble()
-                if (!hasEnoughBubbles()) {
+                if (!isGamePaused && !viewModel.isGameOver.value) {
                     spawnBubble()
+                    if (!hasEnoughBubbles()) {
+                        spawnBubble()
+                    }
                 }
                 
                 val interval = if (viewModel.gameMode == "ZIP") {
@@ -346,11 +341,14 @@ class GameActivity : AppCompatActivity() {
     }
 
     private fun startNailSpawner() {
+        nailSpawner?.let { handler.removeCallbacks(it) }
         nailSpawner = object : Runnable {
             override fun run() {
-                if (!shouldForceBubble() && countNails() < getMaxNails()) {
-                    spawnNail()
-                    consecutiveNails++
+                if (!isGamePaused && !viewModel.isGameOver.value) {
+                    if (!shouldForceBubble() && countNails() < getMaxNails()) {
+                        spawnNail()
+                        consecutiveNails++
+                    }
                 }
                 val interval = if (viewModel.gameMode == "ZIP") {
                     400L
@@ -402,18 +400,35 @@ class GameActivity : AppCompatActivity() {
             
             analyticsManager.logBubblePop(view.type.name, viewModel.combo.value)
 
-            when(view.type) {
-                BubbleView.BubbleType.FREEZE -> viewModel.activateFreeze()
-                BubbleView.BubbleType.SHIELD -> viewModel.activateShield()
-                BubbleView.BubbleType.BLAST -> popAllBubbles()
-                BubbleView.BubbleType.RAINBOW -> viewModel.incrementScore("RAINBOW")
-                else -> viewModel.incrementScore("NORMAL")
+            val (popupText, popupColor) = when(view.type) {
+                BubbleView.BubbleType.FREEZE -> {
+                    viewModel.activateFreeze()
+                    Pair("FREEZE!", Color.CYAN)
+                }
+                BubbleView.BubbleType.SHIELD -> {
+                    viewModel.activateShield()
+                    Pair("SHIELD!", Color.YELLOW)
+                }
+                BubbleView.BubbleType.BLAST -> {
+                    popAllBubbles()
+                    Pair("BOOM!", Color.RED)
+                }
+                BubbleView.BubbleType.RAINBOW -> {
+                    viewModel.incrementScore("RAINBOW")
+                    Pair("+50", Color.parseColor("#FF4081"))
+                }
+                else -> {
+                    viewModel.incrementScore("NORMAL")
+                    Pair("+10", Color.WHITE)
+                }
             }
             
-            val pitch = (1f + viewModel.combo.value * 0.02f).coerceAtMost(1.5f)
+            // Musical escalating pitch based on combo count
+            val pitch = (1.0f + (viewModel.combo.value % 20) * 0.035f).coerceIn(0.85f, 1.8f)
             soundPool.play(popSoundId, 1f, 1f, 1, 0, pitch)
 
-            showParticleBurst(view.x + size / 2, view.y + size / 2)
+            showFloatingScoreText(view.x + size / 2, view.y + size / 2, popupText, popupColor)
+            showParticleBurst(view.x + size / 2, view.y + size / 2, view.type)
             playPopAnimation(view)
             viewModel.addTimeBonus()
             consecutiveNails = 0
@@ -429,6 +444,35 @@ class GameActivity : AppCompatActivity() {
         handler.postDelayed(despawnRunnable, lifetime)
     }
 
+    private fun showFloatingScoreText(x: Float, y: Float, text: String, color: Int = Color.WHITE) {
+        val scoreView = TextView(this).apply {
+            this.text = text
+            textSize = 22f
+            setTypeface(null, Typeface.BOLD_ITALIC)
+            setTextColor(color)
+            setShadowLayer(10f, 0f, 0f, color)
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
+            this.x = x - 50f
+            this.y = y - 30f
+            scaleX = 0.5f
+            scaleY = 0.5f
+        }
+        gameLayout.addView(scoreView)
+
+        scoreView.animate()
+            .translationY(y - 140f)
+            .scaleX(1.3f)
+            .scaleY(1.3f)
+            .alpha(0f)
+            .setDuration(600)
+            .setInterpolator(android.view.animation.DecelerateInterpolator())
+            .withEndAction { gameLayout.removeView(scoreView) }
+            .start()
+    }
+
     private fun spawnNail() {
         val size = if (viewModel.gameMode == "ZIP") {
             280
@@ -436,13 +480,26 @@ class GameActivity : AppCompatActivity() {
             (160 + (viewModel.score.value * 0.6f).toInt()).coerceAtMost(320)
         }
 
+        val baseRotation = Random.nextFloat() * 30f - 15f
         val view = ImageView(this).apply {
-            setImageResource(R.drawable.nail)
+            setImageResource(R.drawable.ic_cartoon_nail)
             tag = "nail"
-            rotation = Random.nextFloat() * 360f
+            rotation = baseRotation
             scaleX = 0f
             scaleY = 0f
-            animate().scaleX(1f).scaleY(1f).setDuration(120).start()
+            animate()
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(160)
+                .setInterpolator(android.view.animation.OvershootInterpolator(1.8f))
+                .start()
+        }
+
+        val wiggleAnim = ObjectAnimator.ofFloat(view, "rotation", baseRotation - 6f, baseRotation + 6f).apply {
+            duration = 180
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.REVERSE
+            start()
         }
 
         val params = FrameLayout.LayoutParams(size, size)
@@ -454,6 +511,7 @@ class GameActivity : AppCompatActivity() {
 
         val despawnRunnable = Runnable {
             if (view.parent != null) {
+                wiggleAnim.cancel()
                 view.animate()
                     .alpha(0f)
                     .setDuration(120)
@@ -463,6 +521,7 @@ class GameActivity : AppCompatActivity() {
         }
 
         view.setOnClickListener {
+            wiggleAnim.cancel()
             hapticManager.vibrateHit()
             handler.removeCallbacks(despawnRunnable)
             
@@ -479,7 +538,7 @@ class GameActivity : AppCompatActivity() {
             viewModel.hitNail()
             soundPool.play(hitSoundId, 1f, 1f, 1, 0, 0.65f)
             shakeScreen()
-            showParticleBurst(view.x + size / 2, view.y + size / 2)
+            showParticleBurst(view.x + size / 2, view.y + size / 2, BubbleView.BubbleType.BLAST)
 
             if (view.parent != null) gameLayout.removeView(view)
         }
@@ -495,9 +554,12 @@ class GameActivity : AppCompatActivity() {
     }
 
     private fun startTimer() {
+        timerHandler.removeCallbacksAndMessages(null)
         timerRunnable = object : Runnable {
             override fun run() {
-                viewModel.updateTime(TIMER_TICK_MS)
+                if (!isGamePaused && !viewModel.isGameOver.value) {
+                    viewModel.updateTime(TIMER_TICK_MS)
+                }
                 timerHandler.postDelayed(this, TIMER_TICK_MS)
             }
         }
@@ -552,13 +614,16 @@ class GameActivity : AppCompatActivity() {
             percentage > 55.0 -> {
                 timeBar.progressTintList = ColorStateList.valueOf(Color.GREEN)
                 isDyingShakeActive = false
+                hideLowTimeWarning()
             }
             percentage > 25.0 -> {
                 timeBar.progressTintList = ColorStateList.valueOf(Color.YELLOW)
                 isDyingShakeActive = false
+                hideLowTimeWarning()
             }
             else -> {
                 timeBar.progressTintList = ColorStateList.valueOf(Color.RED)
+                showLowTimeWarning()
                 if (percentage < 12.0 && !isDyingShakeActive) {
                     isDyingShakeActive = true
                     shakeScreen()
@@ -567,11 +632,34 @@ class GameActivity : AppCompatActivity() {
         }
     }
 
+    private fun showLowTimeWarning() {
+        if (warningVignette.visibility != View.VISIBLE) {
+            warningVignette.visibility = View.VISIBLE
+            warningPulseAnimator?.cancel()
+            warningPulseAnimator = ObjectAnimator.ofFloat(warningVignette, "alpha", 0.2f, 0.7f).apply {
+                duration = 400
+                repeatCount = ValueAnimator.INFINITE
+                repeatMode = ValueAnimator.REVERSE
+                start()
+            }
+        }
+    }
+
+    private fun hideLowTimeWarning() {
+        if (warningVignette.visibility == View.VISIBLE) {
+            warningPulseAnimator?.cancel()
+            warningPulseAnimator = null
+            warningVignette.animate().alpha(0f).setDuration(200).withEndAction {
+                warningVignette.visibility = View.GONE
+            }.start()
+        }
+    }
+
     private fun playPopAnimation(view: View) {
-        val sx = ObjectAnimator.ofFloat(view, "scaleX", 1f, 1.2f)
-        val sy = ObjectAnimator.ofFloat(view, "scaleY", 1f, 1.2f)
-        val snapX = ObjectAnimator.ofFloat(view, "scaleX", 1.2f, 0f)
-        val snapY = ObjectAnimator.ofFloat(view, "scaleY", 1.2f, 0f)
+        val sx = ObjectAnimator.ofFloat(view, "scaleX", 1f, 1.3f)
+        val sy = ObjectAnimator.ofFloat(view, "scaleY", 1f, 1.3f)
+        val snapX = ObjectAnimator.ofFloat(view, "scaleX", 1.3f, 0f)
+        val snapY = ObjectAnimator.ofFloat(view, "scaleY", 1.3f, 0f)
         val fade = ObjectAnimator.ofFloat(view, "alpha", 1f, 0f)
 
         AnimatorSet().apply {
@@ -587,11 +675,39 @@ class GameActivity : AppCompatActivity() {
         }
     }
 
-    private fun showParticleBurst(x: Float, y: Float) {
-        repeat(12) {
+    private fun showParticleBurst(x: Float, y: Float, type: BubbleView.BubbleType = BubbleView.BubbleType.NORMAL) {
+        val particleColor = when (type) {
+            BubbleView.BubbleType.FREEZE -> Color.parseColor("#00E5FF")
+            BubbleView.BubbleType.SHIELD -> Color.parseColor("#FFD700")
+            BubbleView.BubbleType.BLAST -> Color.parseColor("#FF3D00")
+            BubbleView.BubbleType.RAINBOW -> Color.parseColor("#FF4081")
+            else -> Color.parseColor("#88AADD")
+        }
+
+        if (type == BubbleView.BubbleType.BLAST || type == BubbleView.BubbleType.RAINBOW) {
+            val shockwave = View(this).apply {
+                background = getDrawable(R.drawable.score_pill_bg)
+                backgroundTintList = ColorStateList.valueOf(particleColor)
+                alpha = 0.8f
+                layoutParams = FrameLayout.LayoutParams(80, 80)
+                this.x = x - 40f
+                this.y = y - 40f
+            }
+            gameLayout.addView(shockwave)
+            shockwave.animate()
+                .scaleX(3.5f)
+                .scaleY(3.5f)
+                .alpha(0f)
+                .setDuration(450)
+                .withEndAction { gameLayout.removeView(shockwave) }
+                .start()
+        }
+
+        repeat(14) {
             val p = ImageView(this).apply {
                 setImageResource(R.drawable.particle)
-                val s = Random.nextInt(12, 24)
+                imageTintList = ColorStateList.valueOf(particleColor)
+                val s = Random.nextInt(14, 28)
                 layoutParams = FrameLayout.LayoutParams(s, s)
                 this.x = x
                 this.y = y
@@ -599,17 +715,19 @@ class GameActivity : AppCompatActivity() {
             gameLayout.addView(p)
 
             val angle = Math.toRadians(Random.nextInt(360).toDouble())
-            val dist = Random.nextInt(100, 350).toFloat()
+            val dist = Random.nextInt(120, 380).toFloat()
             val tx = x + (Math.cos(angle) * dist).toFloat()
             val ty = y + (Math.sin(angle) * dist).toFloat()
 
             val ax = ObjectAnimator.ofFloat(p, "translationX", x, tx)
             val ay = ObjectAnimator.ofFloat(p, "translationY", y, ty)
+            val scaleX = ObjectAnimator.ofFloat(p, "scaleX", 1f, 1.5f, 0f)
+            val scaleY = ObjectAnimator.ofFloat(p, "scaleY", 1f, 1.5f, 0f)
             val fade = ObjectAnimator.ofFloat(p, "alpha", 1f, 0f)
 
             AnimatorSet().apply {
-                duration = Random.nextLong(350, 600)
-                playTogether(ax, ay, fade)
+                duration = Random.nextLong(350, 650)
+                playTogether(ax, ay, scaleX, scaleY, fade)
                 addListener(object : AnimatorListenerAdapter() {
                     override fun onAnimationEnd(a: Animator) { gameLayout.removeView(p) }
                 })
@@ -631,7 +749,10 @@ class GameActivity : AppCompatActivity() {
         handler.removeCallbacksAndMessages(null)
         timerHandler.removeCallbacksAndMessages(null)
 
-        showGameOverDialog()
+        // Show interstitial ad at game end transition before presenting game over dialog
+        adManager.showInterstitialAd(this) {
+            showGameOverDialog()
+        }
     }
 
     private fun popAllBubbles() {
@@ -653,7 +774,7 @@ class GameActivity : AppCompatActivity() {
         bubblesToPop.forEach { bubble ->
             viewModel.incrementScore("BLAST_COLLATERAL")
             playPopAnimation(bubble)
-            showParticleBurst(bubble.x + bubble.width/2, bubble.y + bubble.height/2)
+            showParticleBurst(bubble.x + bubble.width/2, bubble.y + bubble.height/2, bubble.type)
         }
         showPowerUpStatus("BLAST!", Color.RED)
     }
@@ -676,7 +797,7 @@ class GameActivity : AppCompatActivity() {
             val ty = y + (Math.sin(angle) * dist).toFloat() - size / 2
 
             val ax = ObjectAnimator.ofFloat(p, "x", p.x, tx)
-            val ay = ObjectAnimator.ofFloat(p, "y", p.y, ty)
+            val ay = ObjectAnimator.ofFloat(p, "x", p.y, ty)
             val scaleX = ObjectAnimator.ofFloat(p, "scaleX", 1f, 1.5f, 0f)
             val scaleY = ObjectAnimator.ofFloat(p, "scaleY", 1f, 1.5f, 0f)
             val fade = ObjectAnimator.ofFloat(p, "alpha", 0.8f, 0f)
@@ -731,10 +852,8 @@ class GameActivity : AppCompatActivity() {
             .setCancelable(false)
             .setPositiveButton("Submit & Exit") { _, _ ->
                 val name = input.text.toString().ifEmpty { "Player" }
-                adManager.showInterstitialAd(this) {
-                    viewModel.saveScore(name)
-                    finish()
-                }
+                viewModel.saveScore(name)
+                finish()
             }
 
         if (viewModel.canRevive()) {
@@ -829,8 +948,54 @@ class GameActivity : AppCompatActivity() {
         }
     }
 
+    private fun pauseGame() {
+        if (viewModel.isGameOver.value) return
+        isGamePaused = true
+        if (::gameMusic.isInitialized && gameMusic.isPlaying) {
+            gameMusic.pause()
+        }
+    }
+
+    private fun resumeGame() {
+        if (viewModel.isGameOver.value) return
+        isGamePaused = false
+        if (::gameMusic.isInitialized && !gameMusic.isPlaying) {
+            gameMusic.start()
+        }
+    }
+
+    private fun showPauseDialog() {
+        if (pauseDialog?.isShowing == true || viewModel.isGameOver.value) return
+        pauseDialog = AlertDialog.Builder(this)
+            .setTitle("Game Paused")
+            .setMessage("Tap Resume to continue playing!")
+            .setCancelable(false)
+            .setPositiveButton("Resume") { dialog, _ ->
+                dialog.dismiss()
+                resumeGame()
+            }
+            .setNegativeButton("Exit Game") { dialog, _ ->
+                dialog.dismiss()
+                finish()
+            }
+            .show()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        pauseGame()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (isGamePaused && !viewModel.isGameOver.value) {
+            showPauseDialog()
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
+        warningPulseAnimator?.cancel()
         handler.removeCallbacksAndMessages(null)
         timerHandler.removeCallbacksAndMessages(null)
         if (::gameMusic.isInitialized) {

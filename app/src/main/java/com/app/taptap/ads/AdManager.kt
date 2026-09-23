@@ -3,7 +3,7 @@ package com.app.taptap.ads
 import android.app.Activity
 import android.content.Context
 import android.view.ViewGroup
-import android.widget.FrameLayout
+import com.app.taptap.BuildConfig
 import com.app.taptap.R
 import com.app.taptap.analytics.AnalyticsManager
 import com.google.android.gms.ads.*
@@ -13,6 +13,8 @@ import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAd
 import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAdLoadCallback
+import com.google.android.ump.ConsentRequestParameters
+import com.google.android.ump.UserMessagingPlatform
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -28,10 +30,58 @@ class AdManager @Inject constructor(
     private var lastInterstitialShowTime: Long = 0
     private val MIN_INTERSTITIAL_INTERVAL_MS = 30000L // 30s frequency cap for interstitials
 
+    companion object {
+        // Test Ad Unit IDs provided by Google AdMob for safe development & testing
+        private const val TEST_BANNER_ID = "ca-app-pub-3940256099942544/6300978111"
+        private const val TEST_INTERSTITIAL_ID = "ca-app-pub-3940256099942544/1033173712"
+        private const val TEST_REWARDED_ID = "ca-app-pub-3940256099942544/5224354917"
+        private const val TEST_REWARDED_INTERSTITIAL_ID = "ca-app-pub-3940256099942544/5354046379"
+    }
+
+    private fun getAdUnitId(context: Context, prodResId: Int, testAdUnitId: String): String {
+        return if (BuildConfig.DEBUG) {
+            testAdUnitId
+        } else {
+            context.getString(prodResId)
+        }
+    }
+
     /**
-     * Initializes Google Mobile Ads SDK.
+     * Gathers user consent via UMP SDK for GDPR / ePrivacy compliance, then initializes Mobile Ads SDK.
+     */
+    fun gatherConsentAndInitialize(activity: Activity, onConsentDone: () -> Unit = {}) {
+        val params = ConsentRequestParameters.Builder().build()
+        val consentInformation = UserMessagingPlatform.getConsentInformation(activity)
+
+        consentInformation.requestConsentInfoUpdate(
+            activity,
+            params,
+            {
+                UserMessagingPlatform.loadAndShowConsentFormIfRequired(activity) { _ ->
+                    if (consentInformation.canRequestAds()) {
+                        initialize(activity)
+                    }
+                    onConsentDone()
+                }
+            },
+            { _ ->
+                if (consentInformation.canRequestAds()) {
+                    initialize(activity)
+                }
+                onConsentDone()
+            }
+        )
+    }
+
+    /**
+     * Initializes Google Mobile Ads SDK with COPPA / Content Rating policies configured.
      */
     fun initialize(context: Context) {
+        val requestConfiguration = RequestConfiguration.Builder()
+            .setMaxAdContentRating(RequestConfiguration.MAX_AD_CONTENT_RATING_G)
+            .build()
+        MobileAds.setRequestConfiguration(requestConfiguration)
+
         MobileAds.initialize(context) {
             preloadInterstitialAd(context)
             preloadRewardedAd(context)
@@ -48,7 +98,7 @@ class AdManager @Inject constructor(
      */
     fun loadAdaptiveBanner(activity: Activity, containerView: ViewGroup) {
         val adView = AdView(activity)
-        adView.adUnitId = activity.getString(R.string.banner_ad_unit_id)
+        adView.adUnitId = getAdUnitId(activity, R.string.banner_ad_unit_id, TEST_BANNER_ID)
         
         containerView.removeAllViews()
         containerView.addView(adView)
@@ -85,7 +135,7 @@ class AdManager @Inject constructor(
         if (interstitialAd != null) return
 
         val adRequest = AdRequest.Builder().build()
-        val adUnitId = context.getString(R.string.interstitial_ad_unit_id)
+        val adUnitId = getAdUnitId(context, R.string.interstitial_ad_unit_id, TEST_INTERSTITIAL_ID)
 
         InterstitialAd.load(
             context,
@@ -143,7 +193,7 @@ class AdManager @Inject constructor(
         if (rewardedAd != null) return
 
         val adRequest = AdRequest.Builder().build()
-        val adUnitId = context.getString(R.string.rewarded_ad_unit_id)
+        val adUnitId = getAdUnitId(context, R.string.rewarded_ad_unit_id, TEST_REWARDED_ID)
 
         RewardedAd.load(
             context,
@@ -195,7 +245,7 @@ class AdManager @Inject constructor(
                 }
             }
 
-            rewardedAd?.show(activity) { rewardItem ->
+            rewardedAd?.show(activity) { _ ->
                 rewardEarned = true
                 analyticsManager.logAdStatus("rewarded", "earned_reward")
             }
@@ -213,7 +263,7 @@ class AdManager @Inject constructor(
         if (rewardedInterstitialAd != null) return
 
         val adRequest = AdRequest.Builder().build()
-        val adUnitId = context.getString(R.string.rewarded_interstitial_ad_unit_id)
+        val adUnitId = getAdUnitId(context, R.string.rewarded_interstitial_ad_unit_id, TEST_REWARDED_INTERSTITIAL_ID)
 
         RewardedInterstitialAd.load(
             context,
@@ -265,7 +315,7 @@ class AdManager @Inject constructor(
                 }
             }
 
-            rewardedInterstitialAd?.show(activity) { rewardItem ->
+            rewardedInterstitialAd?.show(activity) { _ ->
                 rewardEarned = true
                 analyticsManager.logAdStatus("rewarded_interstitial", "earned_reward")
             }

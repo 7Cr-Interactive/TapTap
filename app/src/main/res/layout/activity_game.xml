@@ -1,32 +1,38 @@
 <FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"    android:id="@+id/gameLayout"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/gameLayout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@drawable/bg_sky">
+    android:layout_height="match_parent">
 
-    <View
-        android:id="@+id/sunView"
-        android:layout_width="140dp"
-        android:layout_height="140dp"
-        android:layout_marginTop="20dp"
-        android:layout_marginStart="20dp"
-        android:alpha="0.85"
-        android:background="@drawable/sun_glow"/>
-    <!-- 🌿 FAR GRASS (slightly behind feel) -->
-    <com.airbnb.lottie.LottieAnimationView
-        android:id="@+id/bgAnimation"
+    <!-- 🌟 Dynamic 90s Kids Cartoon Scenery Environment -->
+    <com.app.taptap.ui.cartoon.CartoonSceneryView
+        android:id="@+id/sceneryBackground"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:scaleType="centerCrop"
-        android:alpha="0.35"
-        app:lottie_autoPlay="true"
-        app:lottie_loop="true"
-        app:lottie_fileName="game_bg_anim.json"/>
+        android:layout_height="match_parent" />
+
     <com.airbnb.lottie.LottieAnimationView
         android:id="@+id/birdView"
         android:layout_width="120dp"
         android:layout_height="120dp"
+        android:visibility="gone"/>
+
+    <!-- 🥶 Freeze Frost Screen Overlay -->
+    <View
+        android:id="@+id/freezeOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#2600E5FF"
+        android:alpha="0"
+        android:visibility="gone"/>
+
+    <!-- ⚠️ Low Time Red Warning Overlay -->
+    <View
+        android:id="@+id/warningVignette"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#33FF0000"
+        android:alpha="0"
         android:visibility="gone"/>
 
     <!-- ✨ Floating particles -->

@@ -4,6 +4,10 @@ import android.app.Activity
 import android.app.Application
 import android.content.Context
 import android.os.Bundle
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
+import com.app.taptap.BuildConfig
 import com.app.taptap.R
 import com.app.taptap.analytics.AnalyticsManager
 import com.google.android.gms.ads.AdError
@@ -20,7 +24,7 @@ import javax.inject.Singleton
 class AppOpenAdManager @Inject constructor(
     @ApplicationContext context: Context,
     private val analyticsManager: AnalyticsManager
-) : Application.ActivityLifecycleCallbacks {
+) : Application.ActivityLifecycleCallbacks, DefaultLifecycleObserver {
 
     private val application: Application = context.applicationContext as Application
     private var appOpenAd: AppOpenAd? = null
@@ -29,8 +33,21 @@ class AppOpenAdManager @Inject constructor(
     private var loadTime: Long = 0
     private var currentActivity: Activity? = null
 
+    companion object {
+        private const val TEST_APP_OPEN_ID = "ca-app-pub-3940256099942544/9257395921"
+    }
+
     init {
         application.registerActivityLifecycleCallbacks(this)
+        ProcessLifecycleOwner.get().lifecycle.addObserver(this)
+    }
+
+    private fun getAdUnitId(): String {
+        return if (BuildConfig.DEBUG) {
+            TEST_APP_OPEN_ID
+        } else {
+            application.getString(R.string.app_open_ad_unit_id)
+        }
     }
 
     /**
@@ -43,7 +60,7 @@ class AppOpenAdManager @Inject constructor(
 
         isLoadingAd = true
         val request = AdRequest.Builder().build()
-        val adUnitId = application.getString(R.string.app_open_ad_unit_id)
+        val adUnitId = getAdUnitId()
 
         AppOpenAd.load(
             application,
@@ -80,8 +97,8 @@ class AppOpenAdManager @Inject constructor(
      * Displays the App Open Ad if available.
      */
     fun showAdIfAvailable(activity: Activity) {
-        // Do not show App Open Ad during active gameplay to avoid user frustration
-        if (activity.javaClass.simpleName == "GameActivity") {
+        // Do not show App Open Ad during active gameplay (type-safe check immune to R8/ProGuard obfuscation)
+        if (activity is com.app.bubblepop.GameActivity) {
             return
         }
 
@@ -119,13 +136,23 @@ class AppOpenAdManager @Inject constructor(
         appOpenAd?.show(activity)
     }
 
+    /**
+     * Triggered ONLY when the application moves to the foreground (app launch / return from background),
+     * preventing App Open Ads from displaying during internal activity transitions.
+     */
+    override fun onStart(owner: LifecycleOwner) {
+        super.onStart(owner)
+        currentActivity?.let { activity ->
+            if (!isShowingAd) {
+                showAdIfAvailable(activity)
+            }
+        }
+    }
+
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
 
     override fun onActivityStarted(activity: Activity) {
         currentActivity = activity
-        if (!isShowingAd) {
-            showAdIfAvailable(activity)
-        }
     }
 
     override fun onActivityResumed(activity: Activity) {

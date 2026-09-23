@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+
+    <!-- Outer Hazard Glow Ring -->
+    <path
+        android:pathData="M 48,6 A 42,42 0 1,1 47.9,6 Z"
+        android:strokeWidth="6"
+        android:strokeColor="#FF3D00"
+        android:strokeAlpha="0.4"/>
+
+    <path
+        android:pathData="M 48,10 A 38,38 0 1,1 47.9,10 Z"
+        android:strokeWidth="3"
+        android:strokeColor="#FFD600"
+        android:strokeAlpha="0.6"/>
+
+    <!-- Main Nail Body Shadow -->
+    <path
+        android:pathData="M 28,26 L 68,26 L 52,82 L 44,82 Z"
+        android:fillColor="#1E293B"/>
+
+    <!-- Main Metallic Steel Shaft -->
+    <path
+        android:pathData="M 30,24 L 66,24 L 51,80 L 45,80 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="30"
+                android:startY="24"
+                android:endX="66"
+                android:endY="24"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#475569"/>
+                <item android:offset="0.3" android:color="#94A3B8"/>
+                <item android:offset="0.5" android:color="#F8FAFC"/>
+                <item android:offset="0.8" android:color="#64748B"/>
+                <item android:offset="1.0" android:color="#334155"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Sharp Steel Tip -->
+    <path
+        android:pathData="M 45,80 L 51,80 L 48,90 Z"
+        android:fillColor="#F1F5F9"/>
+
+    <!-- Metallic Highlight Sheen Strip -->
+    <path
+        android:pathData="M 46,24 L 50,24 L 48.5,78 L 47.5,78 Z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.8"/>
+
+    <!-- Round Bevel Metallic Nail Head Top -->
+    <path
+        android:pathData="M 22,20 C 22,14 74,14 74,20 C 74,26 22,26 22,20 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="48"
+                android:startY="14"
+                android:endX="48"
+                android:endY="26"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#F8FAFC"/>
+                <item android:offset="0.5" android:color="#94A3B8"/>
+                <item android:offset="1.0" android:color="#334155"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Nail Head Top Highlight Edge -->
+    <path
+        android:pathData="M 26,18 C 34,15 62,15 70,18"
+        android:strokeWidth="2.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"/>
+
+    <!-- Sharp Tip Sparkle Glint -->
+    <path
+        android:pathData="M 48,84 L 48,94 M 43,89 L 53,89"
+        android:strokeWidth="2"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"/>
+
+</vector>
