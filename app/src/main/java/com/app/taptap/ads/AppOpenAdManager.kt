@@ -33,6 +33,10 @@ class AppOpenAdManager @Inject constructor(
     private var loadTime: Long = 0
     private var currentActivity: Activity? = null
 
+    private var lastAppOpenShownTime: Long = 0
+    private val MIN_SHOW_INTERVAL_MS = 15 * 60 * 1000L // 15-minute frequency cap for App Open Ads
+    private val MIN_FULL_SCREEN_COOLDOWN_MS = 30 * 1000L // 30s cooldown after any full-screen ad
+
     companion object {
         private const val TEST_APP_OPEN_ID = "ca-app-pub-3940256099942544/9257395921"
     }
@@ -97,12 +101,25 @@ class AppOpenAdManager @Inject constructor(
      * Displays the App Open Ad if available.
      */
     fun showAdIfAvailable(activity: Activity) {
-        // Do not show App Open Ad during active gameplay (type-safe check immune to R8/ProGuard obfuscation)
-        if (activity is com.app.bubblepop.GameActivity) {
+        // To comply with Google AdMob Policy ("More ads or paid promotional material than publisher-content"),
+        // App Open Ads must NEVER be shown on utility or secondary screens (Help, HighScore, GameActivity).
+        // Only allow showing App Open Ads on the main entry screen (MainActivity).
+        if (activity.javaClass.simpleName != "MainActivity") {
             return
         }
 
         if (isShowingAd) {
+            return
+        }
+
+        val currentTime = System.currentTimeMillis()
+        // Frequency cap check
+        if (currentTime - lastAppOpenShownTime < MIN_SHOW_INTERVAL_MS) {
+            return
+        }
+
+        // Cooldown check against any recent full-screen ad (Interstitial/Rewarded)
+        if (currentTime - AdManager.lastFullScreenAdShownTimestamp < MIN_FULL_SCREEN_COOLDOWN_MS) {
             return
         }
 
@@ -128,6 +145,8 @@ class AppOpenAdManager @Inject constructor(
 
             override fun onAdShowedFullScreenContent() {
                 isShowingAd = true
+                lastAppOpenShownTime = System.currentTimeMillis()
+                AdManager.lastFullScreenAdShownTimestamp = System.currentTimeMillis()
                 analyticsManager.logAdStatus("app_open", "displayed")
             }
         }

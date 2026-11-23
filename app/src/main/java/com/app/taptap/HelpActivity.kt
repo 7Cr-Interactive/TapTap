@@ -3,7 +3,6 @@ package com.app.taptap
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -41,9 +40,6 @@ class HelpActivity : AppCompatActivity() {
         }
 
         analyticsManager.logScreenView("Help & Support", "HelpActivity")
-
-        // Load banner ad
-        adManager.loadAdaptiveBanner(this, binding.bannerContainer)
 
         // Set help text content
         binding.helpText.text = """

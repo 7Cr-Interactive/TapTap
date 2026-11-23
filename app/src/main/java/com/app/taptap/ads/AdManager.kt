@@ -31,6 +31,9 @@ class AdManager @Inject constructor(
     private val MIN_INTERSTITIAL_INTERVAL_MS = 30000L // 30s frequency cap for interstitials
 
     companion object {
+        // Global timestamp tracking when any full-screen ad was shown to avoid ad stacking
+        var lastFullScreenAdShownTimestamp: Long = 0
+
         // Test Ad Unit IDs provided by Google AdMob for safe development & testing
         private const val TEST_BANNER_ID = "ca-app-pub-3940256099942544/6300978111"
         private const val TEST_INTERSTITIAL_ID = "ca-app-pub-3940256099942544/1033173712"
@@ -175,6 +178,7 @@ class AdManager @Inject constructor(
                 }
 
                 override fun onAdShowedFullScreenContent() {
+                    lastFullScreenAdShownTimestamp = System.currentTimeMillis()
                     analyticsManager.logAdStatus("interstitial", "displayed")
                 }
             }
@@ -241,6 +245,7 @@ class AdManager @Inject constructor(
                 }
 
                 override fun onAdShowedFullScreenContent() {
+                    lastFullScreenAdShownTimestamp = System.currentTimeMillis()
                     analyticsManager.logAdStatus("rewarded", "displayed")
                 }
             }
@@ -311,6 +316,7 @@ class AdManager @Inject constructor(
                 }
 
                 override fun onAdShowedFullScreenContent() {
+                    lastFullScreenAdShownTimestamp = System.currentTimeMillis()
                     analyticsManager.logAdStatus("rewarded_interstitial", "displayed")
                 }
             }
